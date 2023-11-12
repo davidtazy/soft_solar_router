@@ -1,5 +1,11 @@
 from datetime import datetime, time, timedelta
 from time import sleep
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+
+from dotenv import load_dotenv
+
 
 from soft_solar_router.application.state_machine import (
     SolarRouterStateMachine,
@@ -22,8 +28,7 @@ from soft_solar_router.power.envoy import Envoy
 from soft_solar_router.switch.sonoff import SonOff
 
 
-import logging
-from logging.handlers import RotatingFileHandler
+load_dotenv()
 
 logging.basicConfig(
     handlers=[
@@ -58,7 +63,7 @@ def main():
         minimal_daily_solar_hours=4,
         too_much_import_duration=time(minute=1),
         too_much_import_watts=1000,
-        no_import_duration=time(minute=10),
+        no_import_duration=time(minute=5),
         no_import_watts=200,
     )
 
@@ -68,9 +73,13 @@ def main():
     sm.add_observer(LogObserver())
     sm_poller = Poller(now, time(minute=1))
     power_poller = Poller(now, time(second=5))
-    weather = OpenMeteo()
-    power = Envoy()
-    switch = SonOff()
+    weather = OpenMeteo()  # ok
+    power = Envoy(
+        host="192.168.1.44",
+        token=os.getenv("ENVOY_TOKEN"),
+        max_duration=settings.no_import_duration,
+    )  # ok
+    switch = SonOff()  # todo
 
     # run event loop
     while True:
@@ -90,10 +99,11 @@ def run(
     switch: Switch,
 ):
     if power_poller.poll(now):
-        power.update()
+        power.update(now)
 
     if sm_poller.poll(now):
-        # generate events
+        logging.info("generate events")
+
         if is_forced_period_window(now, settings) and is_cloudy_tomorrow(
             now, weather, settings
         ):
@@ -107,9 +117,11 @@ def run(
             sm.event_stop_sunny()
 
         if is_too_much_import(now, power, settings):
+            logging.info("too_much_import events")
             sm.event_too_much_import()
 
         if is_no_importing(now, power, settings):
+            logging.info("no_importing events")
             sm.event_no_importing()
 
         switch.set(sm.expected_switch_state)

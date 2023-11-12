@@ -5,3 +5,4 @@ pydot
 requests
 python-statemachine
 cachetools
+python-dotenv
