@@ -1,0 +1,7 @@
+pytest
+black
+pydot
+
+requests
+python-statemachine
+cachetools

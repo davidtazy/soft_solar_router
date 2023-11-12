@@ -1,0 +1,50 @@
+import logging
+from statemachine import StateMachine, State
+
+logger = logging.getLogger("state machine")
+
+
+class SolarRouterStateMachine(StateMachine):
+    "solar router state machine"
+    idle = State(initial=True)
+    sunny_on = State()
+    sunny_off = State()
+    forced_on = State()
+
+    event_start_sunny = idle.to(sunny_on)
+    event_stop_sunny = sunny_on.to(idle) | sunny_off.to(idle)
+    event_too_much_import = sunny_on.to(sunny_off)
+    event_no_importing = sunny_off.to(sunny_on)
+
+    event_start_forced = idle.to(forced_on)
+    event_stop_forced = forced_on.to(idle)
+
+    def __init__(self):
+        self.expected_switch_state = False
+        super(SolarRouterStateMachine, self).__init__(
+            allow_event_without_transition=True
+        )
+
+    def on_enter_idle(self):
+        logger.info("enter idle")
+        self.expected_switch_state = False
+
+    def on_enter_sunny_on(self):
+        logger.info("enter sunny on")
+        self.expected_switch_state = True
+
+    def on_enter_sunny_off(self):
+        logger.info("enter sunny off")
+        self.expected_switch_state = False
+
+    def on_enter_forced_on(self):
+        logger.info("enter forced on")
+        self.expected_switch_state = True
+
+
+class LogObserver(object):
+    def after_transition(self, event, source, target):
+        logger.info(f"after: {source.id}--({event})-->{target.id}")
+
+    def on_enter_state(self, target, event):
+        logger.info(f"enter: {target.id} from {event}")
