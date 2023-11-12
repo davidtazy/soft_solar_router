@@ -76,6 +76,14 @@ def is_too_much_import(now: datetime, power: Power, settings: Settings) -> bool:
     d = settings.too_much_import_duration
     begin = now - timedelta(hours=d.hour, minutes=d.minute, seconds=d.second)
 
+    serie = power.get(now, d)
+
+    if len(serie) == 0:
+        return False
+
+    if begin - serie[0].timestamp < timedelta(seconds=1):
+        return False
+
     def not_too_much(sample: PowerData) -> bool:
         return (
             sample.timestamp > begin
@@ -83,7 +91,7 @@ def is_too_much_import(now: datetime, power: Power, settings: Settings) -> bool:
             and sample.imported_from_grid.ToWatts() < settings.too_much_import_watts
         )
 
-    ret = list(filter(not_too_much, power.get(now, d)))
+    ret = list(filter(not_too_much, serie))
 
     return len(ret) == 0
 
@@ -91,6 +99,14 @@ def is_too_much_import(now: datetime, power: Power, settings: Settings) -> bool:
 def is_no_importing(now: datetime, power: Power, settings: Settings) -> bool:
     d = settings.no_import_duration
     begin = now - timedelta(hours=d.hour, minutes=d.minute, seconds=d.second)
+
+    serie = power.get(now, d)
+
+    if len(serie) == 0:
+        return False
+
+    if begin - serie[0].timestamp < timedelta(seconds=1):
+        return False
 
     def importing(sample: PowerData) -> bool:
         return (
