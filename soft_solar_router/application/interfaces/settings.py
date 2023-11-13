@@ -10,5 +10,5 @@ class Settings:
     minimal_daily_solar_hours: int = 0
     too_much_import_duration: time = time(minute=0)
     too_much_import_watts: int = 0
-    no_import_duration: int = time(minute=0)
+    no_import_duration: time = time(minute=0)
     no_import_watts: int = 0

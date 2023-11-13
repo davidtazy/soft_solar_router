@@ -2,10 +2,10 @@ import logging
 
 from soft_solar_router.application.interfaces.switch import Switch
 
-logger = logging.getLogger("sonoff")
+logger = logging.getLogger("fake switch")
 
 
-class SonOff(Switch):
+class FakeSwitch(Switch):
     state = None
 
     def set(self, state: bool) -> None:

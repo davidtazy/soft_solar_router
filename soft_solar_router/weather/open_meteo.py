@@ -18,6 +18,7 @@ class OpenMeteo(Weather):
             response = requests.get(
                 "https://api.open-meteo.com/v1/forecast?latitude=43.351&longitude=6.122&hourly=direct_normal_irradiance_instant&timezone=auto&forecast_days=2",
                 verify=False,
+                timeout=5,
             )
             response.raise_for_status()
             response = response.json()

@@ -3,6 +3,7 @@ from time import sleep
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import urllib3
 
 from dotenv import load_dotenv
 
@@ -25,6 +26,7 @@ from soft_solar_router.application.interfaces.weather import Weather
 
 from soft_solar_router.weather.open_meteo import OpenMeteo
 from soft_solar_router.power.envoy import Envoy
+from soft_solar_router.switch.fake import FakeSwitch
 from soft_solar_router.switch.sonoff import SonOff
 
 
@@ -34,9 +36,12 @@ logging.basicConfig(
     handlers=[
         RotatingFileHandler("soft_solar_router.log", maxBytes=10240000, backupCount=5)
     ],
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s %(name)s %(levelname)s  %(message)s",
 )
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 
 logging.info("----- Start application -----")
 
@@ -62,7 +67,7 @@ def main():
         forced_hour_duration=4,
         minimal_daily_solar_hours=4,
         too_much_import_duration=time(minute=1),
-        too_much_import_watts=1000,
+        too_much_import_watts=500,
         no_import_duration=time(minute=5),
         no_import_watts=200,
     )
@@ -77,9 +82,10 @@ def main():
     power = Envoy(
         host="192.168.1.44",
         token=os.getenv("ENVOY_TOKEN"),
-        max_duration=settings.no_import_duration,
+        max_duration=time(minute=15),
     )  # ok
-    switch = SonOff()  # todo
+
+    switch = FakeSwitch()  # todo
 
     # run event loop
     while True:
@@ -99,10 +105,11 @@ def run(
     switch: Switch,
 ):
     if power_poller.poll(now):
+        logging.debug("update power")
         power.update(now)
 
     if sm_poller.poll(now):
-        logging.info("generate events")
+        logging.debug("generate forced events")
 
         if is_forced_period_window(now, settings) and is_cloudy_tomorrow(
             now, weather, settings
@@ -111,11 +118,13 @@ def run(
         else:
             sm.event_stop_forced()
 
+        logging.debug("generate sunny events")
         if is_sunny_now(weather, now, settings):
             sm.event_start_sunny()
         else:
             sm.event_stop_sunny()
 
+        logging.debug("generate import event")
         if is_too_much_import(now, power, settings):
             logging.info("too_much_import events")
             sm.event_too_much_import()

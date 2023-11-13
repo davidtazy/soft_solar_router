@@ -103,9 +103,11 @@ def is_no_importing(now: datetime, power: Power, settings: Settings) -> bool:
     serie = power.get(now, d)
 
     if len(serie) == 0:
+        logger.warning(" serie is empty")
         return False
 
     if begin - serie[0].timestamp < timedelta(seconds=1):
+        logger.warning("not enough data")
         return False
 
     def importing(sample: PowerData) -> bool:
@@ -115,6 +117,8 @@ def is_no_importing(now: datetime, power: Power, settings: Settings) -> bool:
             and sample.imported_from_grid.ToWatts() > settings.no_import_watts
         )
 
-    ret = list(filter(importing, power.get(now, d)))
+    serie = list(filter(importing, serie))
 
-    return len(ret) == 0
+    logger.debug(serie)
+
+    return len(serie) == 0

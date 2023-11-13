@@ -36,7 +36,7 @@ class Envoy(Power):
                 "Accept": "application/json",
             }
 
-            response = requests.get(url, headers=headers, verify=False)
+            response = requests.get(url, headers=headers, verify=False, timeout=5)
             response.raise_for_status()
             response = response.json()
 
