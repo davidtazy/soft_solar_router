@@ -119,6 +119,6 @@ def is_no_importing(now: datetime, power: Power, settings: Settings) -> bool:
 
     serie = list(filter(importing, serie))
 
-    logger.debug(serie)
+    logger.debug(f"is no importing {len(serie)} :  {serie}")
 
     return len(serie) == 0

@@ -7,4 +7,5 @@ rsync --archive --verbose --perms   \
            --exclude '.vscode'   \
            --exclude '.env' \
            --exclude 'sync.sh' \
+           --exclude 'soft_solar_router.log' \
            . pi@192.168.1.38:/home/pi/soft_solar_router

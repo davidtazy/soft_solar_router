@@ -36,7 +36,7 @@ logging.basicConfig(
     handlers=[
         RotatingFileHandler("soft_solar_router.log", maxBytes=10240000, backupCount=5)
     ],
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s  %(message)s",
 )
 
@@ -62,14 +62,14 @@ class Poller:
 
 def main():
     settings = Settings(
-        minimal_solar_irradiance_wm2=600,
+        minimal_solar_irradiance_wm2=400,
         forced_hour_begin=22,
         forced_hour_duration=4,
         minimal_daily_solar_hours=4,
         too_much_import_duration=time(minute=1),
-        too_much_import_watts=500,
+        too_much_import_watts=1000,
         no_import_duration=time(minute=5),
-        no_import_watts=200,
+        no_import_watts=300,
     )
 
     # build
