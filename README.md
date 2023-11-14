@@ -26,6 +26,9 @@ hold the application settings
      - give  the sunny period of the next 3 days 
      - give the forced switch on power
 
+## monitoring module
+- push monitoring data to influxdb server
+
 ## application module
 
 ### events.py

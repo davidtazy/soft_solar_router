@@ -14,7 +14,7 @@ class PowerUnit:
 
     @staticmethod
     def FromKiloWatts(kilo_watts: float):
-        return PowerUnit(kilo_watts * 1000)
+        return PowerUnit(int(kilo_watts * 1000))
 
     def ToKiloWatts(self):
         return self.watts / 1000.0
@@ -36,5 +36,5 @@ class Power(ABC):
         pass
 
     @abstractmethod
-    def update(self) -> None:
+    def update(self, now: datetime) -> PowerData:
         pass

@@ -21,7 +21,6 @@ def is_sunny_now(weather: Weather, now: datetime, settings: Settings) -> bool:
             irradiance = data.solar_irradiance_wm2
             found = True
     if not found:
-        logger.critical(" cannot found forecast for now")
         raise ValueError(" cannot found forecast for now")
 
     return irradiance > settings.minimal_solar_irradiance_wm2

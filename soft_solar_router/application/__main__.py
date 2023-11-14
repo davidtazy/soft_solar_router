@@ -6,7 +6,8 @@ import os
 import urllib3
 
 from dotenv import load_dotenv
-
+from soft_solar_router.application.interfaces.monitoring import MonitorData, Monitoring
+from soft_solar_router.monitoring import influx
 
 from soft_solar_router.application.state_machine import (
     SolarRouterStateMachine,
@@ -26,7 +27,6 @@ from soft_solar_router.application.interfaces.weather import Weather
 
 from soft_solar_router.weather.open_meteo import OpenMeteo
 from soft_solar_router.power.envoy import Envoy
-from soft_solar_router.switch.fake import FakeSwitch
 from soft_solar_router.switch.sonoff import SonOff
 
 
@@ -85,16 +85,40 @@ def main():
         max_duration=time(minute=15),
     )  # ok
 
-    # switch = FakeSwitch()  # todo
+    influx_token = os.environ.get("INFLUXDB_TOKEN")
+    influx_url = os.environ.get("INFLUXDB_URL")
+    influx_org = os.environ.get("INFLUXDB_ORG")
+
+    if not influx_token:
+        raise ValueError("env values influx_token not set")
+    if not influx_url:
+        raise ValueError("env values influx_url not set")
+    if not influx_org:
+        raise ValueError("env values influx_org not set")
+    monitoring = influx.Influx(influx_url, influx_org, influx_token)
+
+    api_key = os.getenv("SONOFF_API_KEY")
+    if not api_key:
+        raise ValueError("SONOFF_API_KEY not defined")
     switch = SonOff(
         ip_address="192.168.1.50",
-        api_key=os.getenv("SONOFF_API_KEY"),
+        api_key=api_key,
         device_id="1000bb555e",
     )
     # run event loop
     while True:
         now = datetime.now()
-        run(settings, now, sm, sm_poller, power_poller, weather, power, switch)
+        run(
+            settings,
+            now,
+            sm,
+            sm_poller,
+            power_poller,
+            weather,
+            power,
+            switch,
+            monitoring,
+        )
         sleep(1)
 
 
@@ -107,10 +131,14 @@ def run(
     weather: Weather,
     power: Power,
     switch: Switch,
+    monitoring: Monitoring,
 ):
+    monitor_data = MonitorData(now)
+
     if power_poller.poll(now):
         logging.debug("update power")
-        power.update(now)
+        sample = power.update(now)
+        monitor_data.power_import = sample.imported_from_grid
 
     if sm_poller.poll(now):
         logging.debug("generate forced events")
@@ -139,5 +167,12 @@ def run(
 
         switch.set(sm.expected_switch_state)
 
+        monitor_data.switch_state = sm.expected_switch_state
+        monitoring.push(monitor_data)
 
-main()
+
+try:
+    main()
+except Exception as e:
+    logging.exception(e)
+    raise e

@@ -23,10 +23,12 @@ class Envoy(Power):
         self.constraint_serie(now)
         return self.serie
 
-    def update(self, now: datetime) -> None:
-        self.serie.append(self.last_sample(now))
+    def update(self, now: datetime) -> PowerData:
+        sample = self.last_sample(now)
+        self.serie.append(sample)
 
         self.constraint_serie(now)
+        return sample
 
     def last_sample(self, now):
         try:
@@ -48,7 +50,6 @@ class Envoy(Power):
 
             return PowerData(timestamp=now, imported_from_grid=net_w)
         except Exception as e:
-            logger.exception(e)
             raise e
 
     def constraint_serie(self, now: datetime):
