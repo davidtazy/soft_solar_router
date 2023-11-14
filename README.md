@@ -1,6 +1,5 @@
 [![Python application](https://github.com/davidtazy/soft_solar_router/actions/workflows/python-app.yml/badge.svg)](https://github.com/davidtazy/soft_solar_router/actions/workflows/python-app.yml)
 
-![coverage badge ](coverage.svg)
 
 # soft solar router
 
