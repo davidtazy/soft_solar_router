@@ -190,9 +190,8 @@ def state_switch(api_key, device_id, ip_address):
         return response_json
 
     except:
-        return "change_switch error setting device %s to state %s : %s" % (
+        return "state_switch error setting device %s  : %s" % (
             device_id,
-            on_request,
             traceback.format_exc(),
         )
 
