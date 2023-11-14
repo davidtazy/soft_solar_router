@@ -51,14 +51,3 @@ from weather, power and settings modules, events.py contains methods to generate
 
 ![state machine diagram ](doc/soft_solat_state_machine.png)
 
-
-
-
-
-
-the forced hours of the schedule is the night before cloudy days
-the sunny hours is the hours when solar irradiance is above a value.
-
-during sunny hours, we try to switch on while the grid power import is below 1000w (configurable) . grid power import is too high we switch off power
-
-application running endlessly
