@@ -2,3 +2,4 @@ __pycache__
 venv
 soft_solar_router.log
 .env
+.coverage
