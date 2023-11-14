@@ -1,12 +1,26 @@
-from soft_solar_router.switch.sonoff import SonOff
+from soft_solar_router.switch.sonoff import SonOff, state_switch
 from dotenv import load_dotenv
 import os
 import logging
+import argparse
+import sys
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s  %(message)s",
 )
+
+parser = argparse.ArgumentParser()
+
+group = parser.add_mutually_exclusive_group()
+group.add_argument("--on", action="store_true")
+group.add_argument("--off", action="store_true")
+group.add_argument("--state", action="store_true")
+
+args = parser.parse_args()
+if not args.on and not args.off and not args.state:
+    parser.print_help()
+    sys.exit(2)
 
 load_dotenv()
 ip_address = "192.168.1.50"
@@ -17,4 +31,9 @@ device_id = "1000bb555e"  # not really required
 switch = SonOff(ip_address=ip_address, api_key=api_key, device_id=device_id)
 
 
-switch.set(False)
+logging.info(args)
+
+if args.on or args.off:
+    switch.set(args.on)
+else:
+    print(state_switch(api_key, device_id, ip_address))

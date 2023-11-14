@@ -4,7 +4,6 @@ from urllib3.util.retry import Retry
 import collections
 import json
 import traceback
-from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
 import time
 
 from Crypto.Hash import MD5
@@ -99,7 +98,7 @@ def set_retries(http_session):
     retries = Retry(
         total=8,
         backoff_factor=0.8,
-        method_whitelist=["POST"],
+        allowed_methods=["POST"],
         status_forcelist=None,
     )
 
@@ -170,65 +169,28 @@ def change_switch(api_key, device_id, ip_address, outlet, on_request):
         )
 
 
-listening = True
-is_on = None
+def state_switch(api_key, device_id, ip_address):
+    strReturn = "OK"
+    try:
+        http_session = create_http_session()
+        http_session = set_retries(http_session)
 
+        response = send(
+            http_session,
+            get_update_payload(api_key, device_id, {}),
+            "http://" + ip_address + ":8081/zeroconf/info",
+        )
 
-def BeginMonitoringSonoffDevices(callbackfunc, dictDevices):
-    # import logging
-    # logging.getLogger('zeroconf').setLevel(logging.DEBUG)
+        response_json = json.loads(response.content.decode("utf-8"))
 
-    zeroconf = Zeroconf()
-    listener = sonoffListener(callbackfunc, dictDevices)
-    browser = ServiceBrowser(zeroconf, "_ewelink._tcp.local.", listener)
-    global listening
-    while listening:
-        time.sleep(0.1)
-    browser.cancel()
-    zeroconf.browsers.clear()
-    zeroconf.close()
+        return response_json
 
-
-class sonoffListener(ServiceListener):
-    callbackfunc = None
-    dictDevices = None
-
-    def __init__(self, callbackfunc, dictDevices) -> None:
-        super().__init__()
-        self.callbackfunc = callbackfunc
-        self.dictDevices = dictDevices
-
-    def actionSonoffEvent(self, zc: Zeroconf, type_: str, name: str) -> None:
-        info = zc.get_service_info(type_, name)
-        device = info.properties[b"id"].decode("ascii")
-        data = info.properties.get(b"data1")
-        if info.properties.get(b"data2") is not None:
-            data += info.properties.get(b"data2")
-        if info.properties.get(b"data3") is not None:
-            data += info.properties.get(b"data3")
-        if info.properties.get(b"data4") is not None:
-            data += info.properties.get(b"data4")
-
-        iv = info.properties.get(b"iv")
-
-        if self.dictDevices.get(device, None) == None:
-            return
-
-        api_key = self.dictDevices[device][0]
-
-        data = self.sonoffcrypto.decrypt(data, iv, api_key)
-        data = json.loads(data.decode("ascii"))
-
-        self.callbackfunc(device, data)
-
-    def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        self.actionSonoffEvent(zc, type_, name)
-
-    def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        self.actionSonoffEvent(zc, type_, name)
-
-    def remove_service(self, zc: Zeroconf, type_: str, name: str) -> None:
-        self.actionSonoffEvent(zc, type_, name)
+    except:
+        return "change_switch error setting device %s to state %s : %s" % (
+            device_id,
+            on_request,
+            traceback.format_exc(),
+        )
 
 
 from soft_solar_router.application.interfaces.switch import Switch

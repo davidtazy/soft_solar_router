@@ -8,5 +8,3 @@ cachetools
 python-dotenv
 
 pycryptodome==3.19.0
-zeroconf==0.120.0
-urllib3<2
