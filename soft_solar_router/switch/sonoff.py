@@ -1,3 +1,7 @@
+"""
+    credit to https://github.com/dauheeIRL/SonoffSimpleLAN.git
+"""
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
