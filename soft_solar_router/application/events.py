@@ -11,7 +11,7 @@ logger = logging.getLogger("events")
 
 
 def is_sunny_now(weather: Weather, now: datetime, settings: Settings) -> bool:
-    """find the weather range for now and check if creater then value"""
+    """find the weather range for now and check if greater then setting"""
     datas = weather.forecast()
 
     irradiance = 0
