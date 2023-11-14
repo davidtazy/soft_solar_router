@@ -1,3 +1,5 @@
+[![Python application](https://github.com/davidtazy/soft_solar_router/actions/workflows/python-app.yml/badge.svg)](https://github.com/davidtazy/soft_solar_router/actions/workflows/python-app.yml)
+
 # soft solar router
 
 pilot water heater power switch 
