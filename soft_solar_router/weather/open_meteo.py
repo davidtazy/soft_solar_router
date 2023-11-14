@@ -22,8 +22,6 @@ class OpenMeteo(Weather):
             )
             response.raise_for_status()
             response = response.json()
-            logger.info(response["hourly"]["direct_normal_irradiance_instant"])
-            logger.info(response["hourly"]["time"])
             return self.parse(
                 response["hourly"]["direct_normal_irradiance_instant"],
                 response["hourly"]["time"],
@@ -46,4 +44,14 @@ class OpenMeteo(Weather):
                 )
             )
 
+        OpenMeteo.log(ret)
+
         return ret
+
+    @staticmethod
+    def log(data: List[WeatherData]):
+        ret = []
+        for sample in data:
+            logger.info(
+                dict(time=sample.timestamp.hour, intensity=sample.solar_irradiance_wm2)
+            )
