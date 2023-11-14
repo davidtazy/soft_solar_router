@@ -85,8 +85,12 @@ def main():
         max_duration=time(minute=15),
     )  # ok
 
-    switch = FakeSwitch()  # todo
-
+    # switch = FakeSwitch()  # todo
+    switch = SonOff(
+        ip_address="192.168.1.50",
+        api_key=os.getenv("SONOFF_API_KEY"),
+        device_id="1000bb555e",
+    )
     # run event loop
     while True:
         now = datetime.now()
