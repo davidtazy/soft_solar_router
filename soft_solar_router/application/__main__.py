@@ -167,8 +167,8 @@ def run(
 
         switch.set(sm.expected_switch_state)
 
-        monitor_data.switch_state = sm.expected_switch_state
-        monitoring.push(monitor_data)
+    monitor_data.switch_state = sm.expected_switch_state
+    monitoring.push(monitor_data)
 
 
 try:

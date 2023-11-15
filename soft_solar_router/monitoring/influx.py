@@ -20,8 +20,8 @@ class Influx(Monitoring):
             return 0
         points = create_points(measures=measures.to_dict())
         if len(points):
-            ret = self.write_api.write(bucket=self.bucket, record=points)
-            logger.info(ret)
+            self.write_api.write(bucket=self.bucket, record=points)
+
         return len(points)
 
 
