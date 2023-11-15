@@ -13,7 +13,7 @@ def test_monitor_data_to_dict():
 
     assert m.is_empty() is True
 
-    m.power_import = PowerUnit.FromWatts(123)
+    m.power_import = PowerUnit.FromWatts(123.4)
     m.switch_state = True
 
     assert m.is_empty() is False

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, time
 from dataclasses import dataclass
-from typing import List
+from typing import List, Union
 
 
 @dataclass(frozen=True)
@@ -9,8 +9,8 @@ class PowerUnit:
     watts: int
 
     @staticmethod
-    def FromWatts(watts: int):
-        return PowerUnit(watts)
+    def FromWatts(watts: Union[float, int]):
+        return PowerUnit(int(watts))
 
     @staticmethod
     def FromKiloWatts(kilo_watts: float):

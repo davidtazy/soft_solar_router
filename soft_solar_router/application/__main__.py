@@ -77,7 +77,7 @@ def main():
     sm = SolarRouterStateMachine()
     sm.add_observer(LogObserver())
     sm_poller = Poller(now, time(minute=1))
-    power_poller = Poller(now, time(second=5))
+    power_poller = Poller(now, time(second=2))
     weather = OpenMeteo()  # ok
     power = Envoy(
         host="192.168.1.44",
@@ -167,7 +167,7 @@ def run(
 
         switch.set(sm.expected_switch_state)
 
-    monitor_data.switch_state = sm.expected_switch_state
+        monitor_data.switch_state = sm.expected_switch_state
     monitoring.push(monitor_data)
 
 
