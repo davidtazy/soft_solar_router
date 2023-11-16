@@ -5,13 +5,15 @@ from dataclasses import dataclass, fields
 from datetime import datetime
 from typing import Optional
 
-from .power import PowerUnit
+from .power import EnergyUnit, PowerUnit
 
 
 @dataclass
 class MonitorData:
     timestamp: datetime
     power_import: Optional[PowerUnit] = None
+    instant_solar_production: Optional[PowerUnit] = None
+    total_solar_production: Optional[EnergyUnit] = None
     switch_state: Optional[bool] = None
 
     def is_empty(self) -> bool:
@@ -36,6 +38,9 @@ class MonitorData:
         if isinstance(value, PowerUnit):
             value = value.ToWatts()
             name = f"{name}_watt"
+        if isinstance(value, EnergyUnit):
+            value = value.ToWattsHours()
+            name = f"{name}_wh"
 
         ret[name] = value
 

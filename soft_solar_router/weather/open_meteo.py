@@ -40,7 +40,7 @@ class OpenMeteo(Weather):
             ret.append(
                 WeatherData(
                     timestamp=datetime.fromisoformat(timestamps[i]),
-                    solar_irradiance_wm2=hourly_irradiance[i],
+                    solar_irradiance_wm2=int(hourly_irradiance[i]),
                 )
             )
 

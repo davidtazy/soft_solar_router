@@ -1,4 +1,5 @@
-from datetime import datetime, time, timedelta
+import argparse
+from datetime import datetime, time
 from time import sleep
 import logging
 from logging.handlers import RotatingFileHandler
@@ -7,6 +8,7 @@ import urllib3
 
 from dotenv import load_dotenv
 from soft_solar_router.application.interfaces.monitoring import MonitorData, Monitoring
+from soft_solar_router.monitoring.fake import FakeMonitoring
 from soft_solar_router.monitoring import influx
 
 from soft_solar_router.application.state_machine import (
@@ -27,7 +29,11 @@ from soft_solar_router.application.interfaces.weather import Weather
 
 from soft_solar_router.weather.open_meteo import OpenMeteo
 from soft_solar_router.power.envoy import Envoy
+
 from soft_solar_router.switch.sonoff import SonOff
+from soft_solar_router.switch.fake import FakeSwitch
+
+from .poller import Poller
 
 
 load_dotenv()
@@ -46,21 +52,11 @@ logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 logging.info("----- Start application -----")
 
 
-class Poller:
-    def __init__(self, now: datetime, period: time) -> None:
-        self.period = timedelta(
-            hours=period.hour, minutes=period.minute, seconds=period.second + 1
-        )
-        self.last_poll = now - self.period
-
-    def poll(self, now: datetime):
-        if now - self.last_poll > self.period:
-            self.last_poll = now
-            return True
-        return False
-
-
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true")
+    dry_run = parser.parse_args().dry_run
+
     settings = Settings(
         minimal_solar_irradiance_wm2=400,
         forced_hour_begin=22,
@@ -89,22 +85,27 @@ def main():
     influx_url = os.environ.get("INFLUXDB_URL")
     influx_org = os.environ.get("INFLUXDB_ORG")
 
-    if not influx_token:
-        raise ValueError("env values influx_token not set")
-    if not influx_url:
-        raise ValueError("env values influx_url not set")
-    if not influx_org:
-        raise ValueError("env values influx_org not set")
-    monitoring = influx.Influx(influx_url, influx_org, influx_token)
+    if dry_run:
+        switch = FakeSwitch()
+        monitoring = FakeMonitoring()
+    else:
+        api_key = os.getenv("SONOFF_API_KEY")
+        if not api_key:
+            raise ValueError("SONOFF_API_KEY not defined")
+        switch = SonOff(
+            ip_address="192.168.1.50",
+            api_key=api_key,
+            device_id="1000bb555e",
+        )
 
-    api_key = os.getenv("SONOFF_API_KEY")
-    if not api_key:
-        raise ValueError("SONOFF_API_KEY not defined")
-    switch = SonOff(
-        ip_address="192.168.1.50",
-        api_key=api_key,
-        device_id="1000bb555e",
-    )
+        if not influx_token:
+            raise ValueError("env values influx_token not set")
+        if not influx_url:
+            raise ValueError("env values influx_url not set")
+        if not influx_org:
+            raise ValueError("env values influx_org not set")
+        monitoring = influx.Influx(influx_url, influx_org, influx_token)
+
     # run event loop
     while True:
         now = datetime.now()
@@ -139,6 +140,8 @@ def run(
         logging.debug("update power")
         sample = power.update(now)
         monitor_data.power_import = sample.imported_from_grid
+        monitor_data.instant_solar_production = sample.instant_solar_production
+        monitor_data.total_solar_production = sample.total_solar_production
 
     if sm_poller.poll(now):
         logging.debug("generate forced events")
@@ -158,11 +161,11 @@ def run(
 
         logging.debug("generate import event")
         if is_too_much_import(now, power, settings):
-            logging.info("too_much_import events")
+            logging.debug("too_much_import events")
             sm.event_too_much_import()
 
         if is_no_importing(now, power, settings):
-            logging.info("no_importing events")
+            logging.debug("no_importing events")
             sm.event_no_importing()
 
         switch.set(sm.expected_switch_state)

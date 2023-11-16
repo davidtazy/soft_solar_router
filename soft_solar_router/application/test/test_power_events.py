@@ -1,7 +1,13 @@
 from typing import List
 from datetime import datetime, time, timedelta
 from application.interfaces.settings import Settings
-from application.interfaces.power import Power, PowerData, PowerUnit
+from application.interfaces.power import (
+    EnergyUnit,
+    Power,
+    PowerData,
+    PowerUnit,
+    EnergyUnit,
+)
 
 from application.events import is_too_much_import, is_no_importing
 
@@ -24,6 +30,8 @@ class PowerTestable(Power):
                 PowerData(
                     timestamp=now - i * delta,
                     imported_from_grid=value,
+                    instant_solar_production=PowerUnit.FromWatts(0),
+                    total_solar_production=EnergyUnit.FromWattHours(0),
                 )
             )
 

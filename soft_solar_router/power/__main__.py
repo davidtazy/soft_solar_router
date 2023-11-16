@@ -23,12 +23,10 @@ power = Envoy(
 
 while True:
     now = datetime.now()
-    power.update(now)
+    sample = power.update(now)
 
     serie = power.get(now, duration=time(20))
-    logging.info(f"now {now}")
-    logging.info(f"old {serie[0].timestamp}")
-    logging.info(f"now - old {now - serie[0].timestamp}")
 
+    logging.info(sample)
     logging.info(len(serie))
     sleep(3)
