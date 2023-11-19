@@ -1,14 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from soft_solar_router.application.interfaces.monitoring import MonitorData
 from soft_solar_router.application.interfaces.power import EnergyUnit, PowerUnit
 
 
 def test_monitor_data_to_dict():
-    now = datetime(year=2020, month=12, day=25, hour=11, minute=45, second=59)
+    now = datetime(
+        year=2020, month=12, day=25, hour=11, minute=45, second=59, tzinfo=timezone.utc
+    )
     m = MonitorData(now)
 
     ret = m.to_dict()
-    assert ret["timestamp"] == 1608893159
+    assert ret["timestamp"] == 1608896759
     assert len(ret) == 1
 
     assert m.is_empty() is True

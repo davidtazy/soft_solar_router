@@ -16,7 +16,12 @@ class OpenMeteo(Weather):
     def forecast(self) -> List[WeatherData]:
         try:
             response = requests.get(
-                "https://api.open-meteo.com/v1/forecast?latitude=43.351&longitude=6.122&hourly=direct_normal_irradiance_instant&timezone=auto&forecast_days=2",
+                "https://api.open-meteo.com/v1/forecast?"
+                "latitude=43.351&"
+                "longitude=6.122&"
+                "hourly=direct_normal_irradiance_instant&"
+                "timezone=auto&"
+                "forecast_days=2",
                 verify=False,
                 timeout=5,
             )
@@ -50,7 +55,6 @@ class OpenMeteo(Weather):
 
     @staticmethod
     def log(data: List[WeatherData]):
-        ret = []
         for sample in data:
             logger.info(
                 dict(time=sample.timestamp.hour, intensity=sample.solar_irradiance_wm2)
