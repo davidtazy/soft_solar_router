@@ -1,6 +1,7 @@
 from typing import List
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time
 import logging
+from soft_solar_router.application.interfaces.switch import SwitchHistory
 
 
 from soft_solar_router.application.interfaces.weather import Weather, WeatherData
@@ -12,6 +13,10 @@ logger = logging.getLogger("events")
 
 def is_sunny_now(weather: Weather, now: datetime, settings: Settings) -> bool:
     """find the weather range for now and check if greater then setting"""
+
+    if not is_sunny_period_window(now, settings):
+        return False
+
     datas = weather.forecast()
 
     irradiance = 0
@@ -24,6 +29,20 @@ def is_sunny_now(weather: Weather, now: datetime, settings: Settings) -> bool:
         raise ValueError(" cannot found forecast for now")
 
     return irradiance > settings.minimal_solar_irradiance_wm2
+
+
+def is_sunny_period_window(now: datetime, settings: Settings):
+    begin = settings.solar_time_begin
+    end = settings.solar_time_end
+
+    if not begin and not end:
+        return True
+    if begin and not end:
+        return now.time() > begin
+    if end and not begin:
+        return now.time() < end
+    if begin and end:
+        return now.time() > begin and now.time() < end
 
 
 def is_forced_period_window(now: datetime, settings: Settings):
@@ -120,4 +139,65 @@ def is_no_importing(now: datetime, power: Power, settings: Settings) -> bool:
 
     logger.debug(f"is no importing {len(serie)} :  {serie}")
 
+    return len(serie) == 0
+
+
+def switch_on_since(
+    now: datetime, switch_state_history: List[SwitchHistory], duration: timedelta
+):
+    if len(switch_state_history) == 0:
+        return False
+
+    if switch_state_history[-1] is False:
+        return False
+
+    begin = now - duration
+
+    def switch_is_off(sample: SwitchHistory) -> bool:
+        return (
+            sample.timestamp > begin
+            and sample.timestamp <= now
+            and sample.state is False
+        )
+
+    serie = list(filter(switch_is_off, switch_state_history))
+    return len(serie) == 0
+
+
+def not_enough_production_when_switch_on(
+    now: datetime,
+    power: Power,
+    switch_state_history: List[SwitchHistory],
+    settings: Settings,
+) -> bool:
+    if (
+        switch_on_since(
+            now, switch_state_history, settings.no_production_when_switch_on
+        )
+        is False
+    ):
+        return False
+
+    consumption = settings.water_heater_consumption_watts * 0.75
+    duration = settings.no_production_when_switch_on
+    begin = now - duration
+
+    serie = power.get(now, time(minute=duration.microseconds))
+
+    if len(serie) == 0:
+        logger.warning(" serie is empty")
+        return False
+
+    if begin - serie[0].timestamp < timedelta(seconds=1):
+        logger.warning("not enough data")
+        return False
+
+    def not_enough_prod(sample: PowerData) -> bool:
+        return (
+            sample.timestamp > begin
+            and sample.timestamp < now
+            and sample.instant_solar_production.ToWatts() > consumption
+        )
+
+    serie = list(filter(not_enough_prod, serie))
     return len(serie) == 0

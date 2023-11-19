@@ -5,6 +5,8 @@ from dataclasses import dataclass, fields
 from datetime import datetime
 from typing import Optional
 
+import soft_solar_router
+
 from .power import EnergyUnit, PowerUnit
 
 
@@ -15,6 +17,7 @@ class MonitorData:
     instant_solar_production: Optional[PowerUnit] = None
     total_solar_production: Optional[EnergyUnit] = None
     switch_state: Optional[bool] = None
+    soft_solar_router_state: Optional[str] = None
 
     def is_empty(self) -> bool:
         return len(self.to_dict()) <= 1

@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from time import sleep
 import logging
 from logging.handlers import RotatingFileHandler
@@ -22,6 +22,7 @@ from soft_solar_router.application.events import (
     is_sunny_now,
     is_no_importing,
     is_too_much_import,
+    not_enough_production_when_switch_on,
 )
 from soft_solar_router.application.interfaces.switch import Switch
 from soft_solar_router.application.interfaces.power import Power
@@ -66,6 +67,8 @@ def main():
         too_much_import_watts=1000,
         no_import_duration=time(minute=5),
         no_import_watts=300,
+        solar_time_begin=time(hour=11, minute=30),
+        solar_time_end=time(hour=15, minute=30),
     )
 
     # build
@@ -168,9 +171,15 @@ def run(
             logging.debug("no_importing events")
             sm.event_no_importing()
 
-        switch.set(sm.expected_switch_state)
+        if not_enough_production_when_switch_on(
+            now, power, switch.history(now, timedelta(minutes=3)), settings
+        ):
+            sm.event_no_production_when_switch_on()
+
+        switch.set(now, sm.expected_switch_state)
 
         monitor_data.switch_state = sm.expected_switch_state
+        monitor_data.soft_solar_router_state = sm.current_state.name
     monitoring.push(monitor_data)
 
 

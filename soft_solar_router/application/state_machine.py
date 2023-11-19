@@ -10,14 +10,17 @@ class SolarRouterStateMachine(StateMachine):
     sunny_on = State()
     sunny_off = State()
     forced_on = State()
+    full = State()
 
     event_start_sunny = idle.to(sunny_on)
-    event_stop_sunny = sunny_on.to(idle) | sunny_off.to(idle)
+    event_stop_sunny = sunny_on.to(idle) | sunny_off.to(idle) | full.to(idle)
     event_too_much_import = sunny_on.to(sunny_off)
     event_no_importing = sunny_off.to(sunny_on)
 
     event_start_forced = idle.to(forced_on)
     event_stop_forced = forced_on.to(idle)
+
+    event_no_production_when_switch_on = sunny_on.to(full)
 
     def __init__(self):
         self.expected_switch_state = False
@@ -26,20 +29,19 @@ class SolarRouterStateMachine(StateMachine):
         )
 
     def on_enter_idle(self):
-        logger.info("enter idle")
         self.expected_switch_state = False
 
     def on_enter_sunny_on(self):
-        logger.info("enter sunny on")
         self.expected_switch_state = True
 
     def on_enter_sunny_off(self):
-        logger.info("enter sunny off")
         self.expected_switch_state = False
 
     def on_enter_forced_on(self):
-        logger.info("enter forced on")
         self.expected_switch_state = True
+
+    def on_enter_full(self):
+        self.expected_switch_state = False
 
 
 class LogObserver(object):

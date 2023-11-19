@@ -16,7 +16,7 @@ def test_http_response_to_weather_data():
         ],
     )
     assert ret == [
-        WeatherData(timestamp=datetime(2023, 10, 30, 0, 0), solar_irradiance_wm2=0.0),
-        WeatherData(timestamp=datetime(2023, 10, 30, 1, 0), solar_irradiance_wm2=11.7),
-        WeatherData(timestamp=datetime(2023, 10, 30, 2, 0), solar_irradiance_wm2=2.6),
+        WeatherData(timestamp=datetime(2023, 10, 30, 0, 0), solar_irradiance_wm2=0),
+        WeatherData(timestamp=datetime(2023, 10, 30, 1, 0), solar_irradiance_wm2=11),
+        WeatherData(timestamp=datetime(2023, 10, 30, 2, 0), solar_irradiance_wm2=2),
     ]

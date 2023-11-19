@@ -15,7 +15,6 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad, pad
 from base64 import b64decode, b64encode
 from Crypto.Random import get_random_bytes
-import json
 
 
 def format_encryption_msg(payload, api_key, data):
@@ -112,8 +111,6 @@ def set_retries(http_session):
 
 
 def get_update_payload(api_key, device_id: str, params: dict):
-    import time
-
     payload = {
         "sequence": str(
             int(time.time() * 1000)
@@ -139,7 +136,7 @@ def change_switch(api_key, device_id, ip_address, outlet, on_request):
         http_session = create_http_session()
         http_session = set_retries(http_session)
 
-        if outlet == None:
+        if outlet is None:
             # no outlet so we not strip device
             response = send(
                 http_session,
@@ -165,7 +162,7 @@ def change_switch(api_key, device_id, ip_address, outlet, on_request):
 
         return strReturn
 
-    except:
+    except Exception as e:
         return "change_switch error setting device %s to state %s : %s" % (
             device_id,
             on_request,
@@ -174,7 +171,6 @@ def change_switch(api_key, device_id, ip_address, outlet, on_request):
 
 
 def state_switch(api_key, device_id, ip_address):
-    strReturn = "OK"
     try:
         http_session = create_http_session()
         http_session = set_retries(http_session)
@@ -215,7 +211,7 @@ class SonOff(Switch):
         self.api_key = api_key
         self.device_id = device_id
 
-    def set(self, state: bool) -> None:
+    def _set(self, state: bool) -> None:
         if state != self.state:
             logger.info(f"set switch state to {state}")
             self.state = state
