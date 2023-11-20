@@ -17,6 +17,10 @@ from Crypto.Util.Padding import unpad, pad
 from base64 import b64decode, b64encode
 from Crypto.Random import get_random_bytes
 
+from soft_solar_router.application.interfaces.switch import Switch
+
+import logging
+
 
 def format_encryption_msg(payload, api_key, data):
     payload["selfApikey"] = "123"
@@ -186,24 +190,20 @@ def state_switch(api_key, device_id, ip_address):
 
         return response_json
 
-    except:
+    except Exception as e:
         return "state_switch error setting device %s  : %s" % (
             device_id,
             traceback.format_exc(),
         )
 
 
-from soft_solar_router.application.interfaces.switch import Switch
-
-import logging
-
 logger = logging.getLogger("sonoff")
 
 
 class SonOff(Switch):
-    ip_address = "192.168.1.50"
-    api_key = "5146d9bd-381f-4dfd-bdd5-5972c40eb2b6"
-    device_id = "1000bb555e"  # not really required
+    ip_address: str
+    api_key: str
+    device_id: str
 
     state = None
 

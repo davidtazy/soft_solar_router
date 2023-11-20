@@ -79,16 +79,16 @@ def test_too_much_power_import():
     not_too_much = PowerTestable.GenerateNet(PowerUnit.FromWatts(999), now, duration)
     too_much = PowerTestable.GenerateNet(PowerUnit.FromWatts(1001), now, duration)
 
-    assert False == is_too_much_import(now, not_too_much, settings)
-    assert True == is_too_much_import(now, too_much, settings)
+    assert is_too_much_import(now, not_too_much, settings) is False
+    assert is_too_much_import(now, too_much, settings) is True
 
     # not enough data ==> no too much import
-    assert False == is_too_much_import(now, PowerTestable([]), settings)
+    assert is_too_much_import(now, PowerTestable([]), settings) is False
 
     too_much_but_not_enough_data = PowerTestable.GenerateNet(
         PowerUnit.FromWatts(1001), now, time(second=30)
     )
-    assert False == is_too_much_import(now, too_much_but_not_enough_data, settings)
+    assert is_too_much_import(now, too_much_but_not_enough_data, settings) is False
 
 
 def test_no_power_import():
@@ -99,16 +99,16 @@ def test_no_power_import():
     no_importing = PowerTestable.GenerateNet(PowerUnit.FromWatts(299), now, duration)
     importing = PowerTestable.GenerateNet(PowerUnit.FromWatts(301), now, duration)
 
-    assert True == is_no_importing(now, no_importing, settings)
-    assert False == is_no_importing(now, importing, settings)
+    assert is_no_importing(now, no_importing, settings) is True
+    assert is_no_importing(now, importing, settings) is True
 
     # not enough data ==> no no-importing
-    assert False == is_no_importing(now, PowerTestable([]), settings)
+    assert is_no_importing(now, PowerTestable([]), settings) is False
 
     no_importing_but_not_enough_data = PowerTestable.GenerateNet(
         PowerUnit.FromWatts(1001), now, time(second=30)
     )
-    assert False == is_no_importing(now, no_importing_but_not_enough_data, settings)
+    assert is_no_importing(now, no_importing_but_not_enough_data, settings) is False
 
 
 def test_switch_on_since_with_only_one_sample_too_recent_is_not_suffisant():

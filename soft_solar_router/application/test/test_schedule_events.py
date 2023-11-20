@@ -60,7 +60,7 @@ def test_stop_sunny_when_solar_irradiance_less_then_value():
     weather = WeatherTestable.FromConstantValues(now, 100)
     settings = Settings(minimal_solar_irradiance_wm2=600)
 
-    assert is_sunny_now(weather, now, settings) == False
+    assert is_sunny_now(weather, now, settings) is False
 
 
 def test_start_sunny_raise_if_weather_for_now_is_not_found():
@@ -76,14 +76,14 @@ def test_check_forced_during_setted_hours():
 
     for hour in range(0, 2):
         now = datetime(2022, 10, 10, hour=hour, minute=0, second=0)
-        assert is_forced_period_window(now, settings) == True
+        assert is_forced_period_window(now, settings) is True
 
     for hour in range(2, 22):
         now = datetime(2022, 10, 10, hour=hour, minute=0, second=0)
-        assert is_forced_period_window(now, settings) == False
+        assert is_forced_period_window(now, settings) is False
     for hour in range(22, 24):
         now = datetime(2022, 10, 10, hour=hour, minute=0, second=0)
-        assert is_forced_period_window(now, settings) == True
+        assert is_forced_period_window(now, settings) is True
 
 
 def test_get_tomorrow_date():
@@ -109,7 +109,7 @@ def test_is_cloudy_tomorrow_cloudy_day():
     tomorrow = now + timedelta(days=1)
     weather = WeatherTestable.FromConstantValues(tomorrow, 100)
 
-    assert is_cloudy_tomorrow(now, weather, settings) == True
+    assert is_cloudy_tomorrow(now, weather, settings) is True
 
 
 def test_is_cloudy_tomorrow_when_sunny_day():
@@ -123,7 +123,7 @@ def test_is_cloudy_tomorrow_when_sunny_day():
     tomorrow = now + timedelta(days=1)
     weather = WeatherTestable.FromConstantValues(tomorrow, 1000)
 
-    assert is_cloudy_tomorrow(now, weather, settings) == False
+    assert is_cloudy_tomorrow(now, weather, settings) is False
 
 
 def test_is_cloudy_tomorrow_when_not_enough_sunny_hours():

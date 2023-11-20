@@ -3,3 +3,4 @@ venv
 soft_solar_router.log
 .env
 .coverage
+.pytest_cache
