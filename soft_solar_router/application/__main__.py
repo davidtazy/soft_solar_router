@@ -59,7 +59,7 @@ def main():
     dry_run = parser.parse_args().dry_run
 
     settings = Settings(
-        minimal_solar_irradiance_wm2=400,
+        minimal_solar_irradiance_wm2=330,
         forced_hour_begin=22,
         forced_hour_duration=4,
         minimal_daily_solar_hours=4,
@@ -69,6 +69,8 @@ def main():
         no_import_watts=300,
         solar_time_begin=time(hour=11, minute=30),
         solar_time_end=time(hour=15, minute=30),
+        no_production_when_switch_on=timedelta(minutes=3),
+        water_heater_consumption_watts=2000,
     )
 
     # build
@@ -88,14 +90,19 @@ def main():
     influx_url = os.environ.get("INFLUXDB_URL")
     influx_org = os.environ.get("INFLUXDB_ORG")
 
+    switch_history_duration = settings.no_production_when_switch_on + timedelta(
+        minutes=1
+    )
+
     if dry_run:
-        switch = FakeSwitch()
+        switch = FakeSwitch(history_duration=switch_history_duration)
         monitoring = FakeMonitoring()
     else:
         api_key = os.getenv("SONOFF_API_KEY")
         if not api_key:
             raise ValueError("SONOFF_API_KEY not defined")
         switch = SonOff(
+            history_duration=switch_history_duration,
             ip_address="192.168.1.50",
             api_key=api_key,
             device_id="1000bb555e",
@@ -171,9 +178,7 @@ def run(
             logging.debug("no_importing events")
             sm.event_no_importing()
 
-        if not_enough_production_when_switch_on(
-            now, power, switch.history(now, timedelta(minutes=3)), settings
-        ):
+        if not_enough_production_when_switch_on(now, power, switch.history(), settings):
             sm.event_no_production_when_switch_on()
 
         switch.set(now, sm.expected_switch_state)

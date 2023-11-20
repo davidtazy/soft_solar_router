@@ -5,8 +5,6 @@ from dataclasses import dataclass, fields
 from datetime import datetime
 from typing import Optional
 
-import soft_solar_router
-
 from .power import EnergyUnit, PowerUnit
 
 

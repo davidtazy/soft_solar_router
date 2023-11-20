@@ -12,13 +12,17 @@ class SwitchHistory:
 
 class Switch(ABC):
     _history: List[SwitchHistory] = []
+    _duration: timedelta
+
+    def __init__(self, history_duration: timedelta):
+        self._duration = history_duration
 
     def set(self, now: datetime, state: bool) -> None:
         self._history.append(SwitchHistory(now, state))
 
         self._history = list(
             filter(
-                lambda sample: sample.timestamp > now - timedelta(seconds=60 * 3),
+                lambda sample: sample.timestamp > now - self._duration,
                 self._history,
             )
         )
@@ -29,7 +33,5 @@ class Switch(ABC):
     def _set(self, state: bool) -> None:
         pass
 
-    def history(self, now: datetime, duration: timedelta):
-        return list(
-            filter(lambda sample: sample.timestamp > now - duration, self._history)
-        )
+    def history(self):
+        return self._history

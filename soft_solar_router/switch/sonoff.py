@@ -9,6 +9,7 @@ import collections
 import json
 import traceback
 import time
+from datetime import timedelta
 
 from Crypto.Hash import MD5
 from Crypto.Cipher import AES
@@ -206,7 +207,10 @@ class SonOff(Switch):
 
     state = None
 
-    def __init__(self, ip_address: str, api_key: str, device_id: str) -> None:
+    def __init__(
+        self, history_duration: timedelta, ip_address: str, api_key: str, device_id: str
+    ) -> None:
+        super().__init__(history_duration)
         self.ip_address = ip_address
         self.api_key = api_key
         self.device_id = device_id

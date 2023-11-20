@@ -1,3 +1,4 @@
+from datetime import timedelta, datetime
 from soft_solar_router.switch.sonoff import SonOff, state_switch
 from dotenv import load_dotenv
 import os
@@ -27,13 +28,22 @@ ip_address = "192.168.1.50"
 api_key = os.getenv("SONOFF_API_KEY")
 device_id = "1000bb555e"  # not really required
 
+if api_key is None:
+    sys.exit(1)
 
-switch = SonOff(ip_address=ip_address, api_key=api_key, device_id=device_id)
+switch = SonOff(
+    history_duration=timedelta(minutes=3),
+    ip_address=ip_address,
+    api_key=api_key,
+    device_id=device_id,
+)
 
 
 logging.info(args)
 
+now = datetime.now()
+
 if args.on or args.off:
-    switch.set(args.on)
+    switch.set(now, args.on)
 else:
     print(state_switch(api_key, device_id, ip_address))

@@ -12,6 +12,7 @@ from application.events import (
     is_too_much_import,
     is_no_importing,
     not_enough_production_when_switch_on,
+    switch_on_since,
 )
 from soft_solar_router.application.interfaces.switch import SwitchHistory
 
@@ -108,6 +109,43 @@ def test_no_power_import():
         PowerUnit.FromWatts(1001), now, time(second=30)
     )
     assert False == is_no_importing(now, no_importing_but_not_enough_data, settings)
+
+
+def test_switch_on_since_with_only_one_sample_too_recent_is_not_suffisant():
+    now = datetime.now()
+
+    assert (
+        switch_on_since(now, [SwitchHistory(now, state=True)], timedelta(minutes=1))
+        is False
+    )
+    assert (
+        switch_on_since(
+            now,
+            [SwitchHistory(now - timedelta(seconds=30), state=True)],
+            timedelta(minutes=1),
+        )
+        is False
+    )
+
+
+def test_switch_on_since_with_one_old_sample_is_ok():
+    now = datetime.now()
+
+    switch_on_once = [SwitchHistory(now - timedelta(minutes=2), state=True)]
+
+    assert switch_on_since(now, switch_on_once, timedelta(minutes=1)) is True
+
+
+def test_switch_on_with_switch_off_false():
+    now = datetime.now()
+
+    switch_on_once = [
+        SwitchHistory(now - timedelta(minutes=2), state=True),
+        SwitchHistory(now - timedelta(seconds=30), state=False),
+        SwitchHistory(now - timedelta(seconds=1), state=True),
+    ]
+
+    assert switch_on_since(now, switch_on_once, timedelta(minutes=1)) is False
 
 
 def test_no_production_when_switch_on():

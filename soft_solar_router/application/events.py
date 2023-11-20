@@ -153,14 +153,23 @@ def switch_on_since(
 
     begin = now - duration
 
-    def switch_is_off(sample: SwitchHistory) -> bool:
-        return (
-            sample.timestamp > begin
-            and sample.timestamp <= now
-            and sample.state is False
-        )
+    # get all elements in the time window + the first older one
+    state = list(reversed(switch_state_history))
+    last_index = -1
+    for i, sample in enumerate(state):
+        if sample.timestamp <= begin:
+            last_index = i + 1
+    if last_index < 0:
+        return False
+    state = state[0:last_index]
 
-    serie = list(filter(switch_is_off, switch_state_history))
+    if len(state) == 0:
+        return False
+
+    def switch_is_off(sample: SwitchHistory) -> bool:
+        return sample.state is False
+
+    serie = list(filter(switch_is_off, state))
     return len(serie) == 0
 
 
