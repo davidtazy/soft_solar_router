@@ -18,9 +18,11 @@ class SolarRouterStateMachine(StateMachine):
     event_no_importing = sunny_off.to(sunny_on)
 
     event_start_forced = idle.to(forced_on)
-    event_stop_forced = forced_on.to(idle)
+    event_stop_forced = forced_on.to(idle) | full.to(idle)
 
-    event_not_enought_consumption_when_switch_on = sunny_on.to(full)
+    event_not_enought_consumption_when_switch_on = sunny_on.to(full) | forced_on.to(
+        full
+    )
 
     def __init__(self):
         self.expected_switch_state = False
