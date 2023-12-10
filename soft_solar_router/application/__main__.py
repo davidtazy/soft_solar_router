@@ -7,6 +7,7 @@ import os
 import urllib3
 
 from dotenv import load_dotenv
+from soft_solar_router.application.interfaces.grid import Grid
 from soft_solar_router.application.interfaces.monitoring import MonitorData, Monitoring
 from soft_solar_router.monitoring.fake import FakeMonitoring
 from soft_solar_router.monitoring import influx
@@ -33,6 +34,8 @@ from soft_solar_router.power.envoy import Envoy
 
 from soft_solar_router.switch.sonoff import SonOff
 from soft_solar_router.switch.fake import FakeSwitch
+
+from soft_solar_router.grid.edf import Edf
 
 from .poller import Poller
 
@@ -79,12 +82,13 @@ def main():
     sm.add_observer(LogObserver())
     sm_poller = Poller(now, time(minute=1))
     power_poller = Poller(now, time(second=2))
-    weather = OpenMeteo()  # ok
+    weather = OpenMeteo()
     power = Envoy(
         host="192.168.1.44",
         token=os.getenv("ENVOY_TOKEN"),
         max_duration=time(minute=15),
-    )  # ok
+    )
+    grid = Edf()
 
     influx_token = os.environ.get("INFLUXDB_TOKEN")
     influx_url = os.environ.get("INFLUXDB_URL")
@@ -129,6 +133,7 @@ def main():
             power,
             switch,
             monitoring,
+            grid,
         )
         sleep(1)
 
@@ -143,6 +148,7 @@ def run(
     power: Power,
     switch: Switch,
     monitoring: Monitoring,
+    grid: Grid,
 ):
     monitor_data = MonitorData(now)
 
@@ -156,15 +162,18 @@ def run(
     if sm_poller.poll(now):
         logging.debug("generate forced events")
 
-        if is_forced_period_window(now, settings) and is_cloudy_tomorrow(
-            now, weather, settings
+        # forced_period_window is 22pm to 6am
+        # now - 6hours ensure that edf.is_red_tomorrow target the expected day
+        grid_now = now - timedelta(hours=6)
+        if is_forced_period_window(now, settings) and (
+            grid.is_red_tomorrow(grid_now) or is_cloudy_tomorrow(now, weather, settings)
         ):
             sm.event_start_forced()
         else:
             sm.event_stop_forced()
 
         logging.debug("generate sunny events")
-        if is_sunny_now(weather, now, settings):
+        if not grid.is_red_today(now) and is_sunny_now(weather, now, settings):
             sm.event_start_sunny()
         else:
             sm.event_stop_sunny()
