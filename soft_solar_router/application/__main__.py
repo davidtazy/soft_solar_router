@@ -22,7 +22,7 @@ from soft_solar_router.application.events import (
     is_sunny_now,
     is_no_importing,
     is_too_much_import,
-    not_enough_production_when_switch_on,
+    not_enought_consumption_when_switch_on,
 )
 from soft_solar_router.application.interfaces.switch import Switch
 from soft_solar_router.application.interfaces.power import Power
@@ -178,8 +178,10 @@ def run(
             logging.debug("no_importing events")
             sm.event_no_importing()
 
-        if not_enough_production_when_switch_on(now, power, switch.history(), settings):
-            sm.event_no_production_when_switch_on()
+        if not_enought_consumption_when_switch_on(
+            now, power, switch.history(), settings
+        ):
+            sm.event_not_enought_consumption_when_switch_on()
 
         switch.set(now, sm.expected_switch_state)
 

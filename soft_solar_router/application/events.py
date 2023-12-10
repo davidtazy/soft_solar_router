@@ -173,7 +173,7 @@ def switch_on_since(
     return len(serie) == 0
 
 
-def not_enough_production_when_switch_on(
+def not_enought_consumption_when_switch_on(
     now: datetime,
     power: Power,
     switch_state_history: List[SwitchHistory],
@@ -201,12 +201,16 @@ def not_enough_production_when_switch_on(
         logger.warning("not enough data")
         return False
 
-    def not_enough_prod(sample: PowerData) -> bool:
+    def not_enough_cons(sample: PowerData) -> bool:
         return (
             sample.timestamp > begin
             and sample.timestamp < now
-            and sample.instant_solar_production.ToWatts() > consumption
+            and (
+                sample.instant_solar_production.ToWatts()
+                + sample.imported_from_grid.ToWatts()
+            )
+            > consumption
         )
 
-    serie = list(filter(not_enough_prod, serie))
+    serie = list(filter(not_enough_cons, serie))
     return len(serie) == 0

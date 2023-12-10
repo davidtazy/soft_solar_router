@@ -11,7 +11,7 @@ from application.interfaces.power import (
 from application.events import (
     is_too_much_import,
     is_no_importing,
-    not_enough_production_when_switch_on,
+    not_enought_consumption_when_switch_on,
     switch_on_since,
 )
 from soft_solar_router.application.interfaces.switch import SwitchHistory
@@ -100,7 +100,7 @@ def test_no_power_import():
     importing = PowerTestable.GenerateNet(PowerUnit.FromWatts(301), now, duration)
 
     assert is_no_importing(now, no_importing, settings) is True
-    assert is_no_importing(now, importing, settings) is True
+    assert is_no_importing(now, importing, settings) is False
 
     # not enough data ==> no no-importing
     assert is_no_importing(now, PowerTestable([]), settings) is False
@@ -148,7 +148,7 @@ def test_switch_on_with_switch_off_false():
     assert switch_on_since(now, switch_on_once, timedelta(minutes=1)) is False
 
 
-def test_no_production_when_switch_on():
+def test_no_enough_consumption_when_switch_on():
     now = datetime.now()
     duration = timedelta(minutes=1)
     settings = Settings(
@@ -166,12 +166,13 @@ def test_no_production_when_switch_on():
         state=True, now=now, duration=timedelta(minutes=3), count=10
     )
 
-    assert not_enough_production_when_switch_on(now, power, switch_on, settings)
+    assert not_enought_consumption_when_switch_on(now, power, switch_on, settings)
 
     switch_off = generate_switch_state(
         state=False, now=now, duration=timedelta(minutes=3), count=10
     )
 
     assert (
-        not_enough_production_when_switch_on(now, power, switch_off, settings) is False
+        not_enought_consumption_when_switch_on(now, power, switch_off, settings)
+        is False
     )
