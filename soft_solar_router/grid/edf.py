@@ -9,7 +9,7 @@ logger = logging.getLogger("envoy")
 
 
 class Edf(Grid):
-    TEMPO_ROUGE = "TEMP0_ROUGE"
+    TEMPO_ROUGE = "TEMPO_ROUGE"
 
     def __init__(self):
         self.cache = {}
@@ -37,6 +37,8 @@ class Edf(Grid):
             logger.error(f"failed to request tempo {r.status_code}")
             return
         ret = r.json()
+
+        logger.info(ret)
 
         if ret["couleurJourJ"] != "NON_DEFINI":
             self.cache[now] = ret["couleurJourJ"]
