@@ -9,6 +9,7 @@ import urllib3
 from dotenv import load_dotenv
 from soft_solar_router.application.interfaces.grid import Grid
 from soft_solar_router.application.interfaces.monitoring import MonitorData, Monitoring
+from soft_solar_router.application.interfaces.notifications import Notifications
 from soft_solar_router.monitoring.fake import FakeMonitoring
 from soft_solar_router.monitoring import influx
 
@@ -36,6 +37,8 @@ from soft_solar_router.switch.sonoff import SonOff
 from soft_solar_router.switch.fake import FakeSwitch
 
 from soft_solar_router.grid.edf import Edf
+
+from soft_solar_router.notifications.ntfy import Ntfy
 
 from .poller import Poller
 
@@ -84,11 +87,12 @@ def main():
     power_poller = Poller(now, time(second=2))
     weather = OpenMeteo()
     power = Envoy(
-        host="192.168.1.44",
+        host="envoy",
         token=os.getenv("ENVOY_TOKEN"),
         max_duration=time(minute=15),
     )
     grid = Edf()
+    ntf = Ntfy()
 
     influx_token = os.environ.get("INFLUXDB_TOKEN")
     influx_url = os.environ.get("INFLUXDB_URL")
@@ -107,10 +111,12 @@ def main():
             raise ValueError("SONOFF_API_KEY not defined")
         switch = SonOff(
             history_duration=switch_history_duration,
-            ip_address="192.168.1.50",
+            ip_address="192.168.1.27",
             api_key=api_key,
             device_id="1000bb555e",
         )
+        #disable switch command
+        switch = FakeSwitch(history_duration=switch_history_duration)
 
         if not influx_token:
             raise ValueError("env values influx_token not set")
@@ -134,6 +140,7 @@ def main():
             switch,
             monitoring,
             grid,
+            ntf,
         )
         sleep(1)
 
@@ -149,6 +156,7 @@ def run(
     switch: Switch,
     monitoring: Monitoring,
     grid: Grid,
+    ntf: Notifications,
 ):
     monitor_data = MonitorData(now)
 
@@ -169,14 +177,18 @@ def run(
             grid.is_red_tomorrow(grid_now) or is_cloudy_tomorrow(now, weather, settings)
         ):
             sm.event_start_forced()
+            ntf.on_start_forced(grid_now)
+
         else:
             sm.event_stop_forced()
 
         logging.debug("generate sunny events")
         if not grid.is_red_today(now) and is_sunny_now(weather, now, settings):
             sm.event_start_sunny()
+            ntf.on_start_sunny(now)
         else:
             sm.event_stop_sunny()
+            ntf.on_stop_sunny(now)
 
         logging.debug("generate import event")
         if is_too_much_import(now, power, settings):
@@ -191,6 +203,9 @@ def run(
             now, power, switch.history(), settings
         ):
             sm.event_not_enought_consumption_when_switch_on()
+
+        if sm.current_state == sm.full:
+            ntf.on_full_water_heater(now)
 
         switch.set(now, sm.expected_switch_state)
 

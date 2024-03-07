@@ -1,6 +1,6 @@
 set -ex
-
-rsync --archive --verbose --perms   \
+#rsync --archive --verbose --perms   \
+rsync --archive  --perms   \
            --exclude 'venv' \
            --exclude '.git' \
            --exclude '__pycache__' \

@@ -1,0 +1,55 @@
+from soft_solar_router.application.interfaces.notifications import (
+    Notifications,
+    Notifier,
+)
+import datetime
+import requests
+import logging
+
+logger = logging.getLogger("nty")
+
+NTFY_TOPIC_NAME = "tazy_soft_solar_router"
+
+
+class Ntfy(Notifications):
+    full_ntf = Notifier()
+    start_sunny_ntf = Notifier()
+    start_forced_ntf = Notifier()
+    stop_sunny_ntf = Notifier()
+
+    def notify(self, msg: str):
+        try:
+            requests.post(
+                f"https://ntfy.sh/{NTFY_TOPIC_NAME}",
+                data=msg.encode(encoding="utf-8"),
+            )
+        except Exception as e:
+            logger.exception(e)
+
+    def on_full_water_heater(self, now: datetime.datetime) -> None:
+        if self.full_ntf.load_and_check_if_first(now):
+            self.notify("Le chauffe eau est plein !!!\n tu peux faire des machines")
+
+    def on_start_sunny(self, now: datetime.datetime) -> None:
+        if self.start_sunny_ntf.load_and_check_if_first(now):
+            self.notify("Demarrage du chauffe eau par les panneaux solaires")
+
+    def on_stop_sunny(self, now: datetime.datetime) -> None:
+        if self.full_ntf.is_notified_today(now):
+            # dont notify because already done by the full event
+            return
+        if not self.start_sunny_ntf.is_notified_today(now):
+            # dont notify because sunny not started today yet
+            return
+        if self.stop_sunny_ntf.load_and_check_if_first(now):
+            self.notify(
+                "Fin de chauffe eau par le solaire.\n"
+                "ATTENTION le ballon d'eau chaude n'est pas plein !!! "
+            )
+        pass
+
+    def on_start_forced(self, now: datetime.datetime) -> None:
+        if self.start_forced_ntf.load_and_check_if_first(now):
+            self.notify(
+                "Demarrage du chauffe eau par edf. \ncar demain jour ROUGE ou nuageux"
+            )
