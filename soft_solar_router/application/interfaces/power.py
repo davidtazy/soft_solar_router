@@ -52,8 +52,8 @@ class PowerData:
 
 class Power(ABC):
     @abstractmethod
-    def get(self, now: datetime, duration: time) -> List[PowerData]:
-        """get the n last values from now - duration"""
+    def get(self, now: datetime) -> List[PowerData]:
+        """get the n last values from now"""
         pass
 
     @abstractmethod

@@ -10,6 +10,8 @@ from soft_solar_router.application.interfaces.power import Power, PowerData
 
 logger = logging.getLogger("events")
 
+import traces
+
 
 def is_sunny_now(weather: Weather, now: datetime, settings: Settings) -> bool:
     """find the weather range for now and check if greater then setting"""
@@ -90,92 +92,96 @@ def is_cloudy_tomorrow(now: datetime, weather: Weather, settings: Settings):
     return len(forecast) < settings.minimal_daily_solar_hours
 
 
-def is_too_much_import(now: datetime, power: Power, settings: Settings) -> bool:
-    d = settings.too_much_import_duration
-    begin = now - timedelta(hours=d.hour, minutes=d.minute, seconds=d.second)
+def is_too_much_import(
+    now: datetime, consumption_watts: traces.TimeSeries, settings: Settings
+):
+    duration = settings.too_much_import_duration
+    dduration = timedelta(
+        hours=duration.hour, minutes=duration.minute, seconds=duration.second
+    )
+    begin = now - dduration
 
-    serie = power.get(now, d)
-
-    if len(serie) == 0:
+    # check get all the values in the time window
+    if consumption_watts.is_empty() or consumption_watts.first_key() > begin:
         return False
 
-    if begin - serie[0].timestamp < timedelta(seconds=1):
-        return False
+    ts = consumption_watts.slice(begin, now)
 
-    def not_too_much(sample: PowerData) -> bool:
-        return (
-            sample.timestamp > begin
-            and sample.timestamp < now
-            and sample.imported_from_grid.ToWatts() < settings.too_much_import_watts
-        )
+    logger.debug(f"is too much import {ts}")
 
-    ret = list(filter(not_too_much, serie))
-
-    return len(ret) == 0
+    return (
+        ts.threshold(settings.too_much_import_watts).distribution(normalized=True)[True]
+        == 1
+    )
 
 
-def is_no_importing(now: datetime, power: Power, settings: Settings) -> bool:
+def is_no_importing(
+    now: datetime, consumption: traces.TimeSeries, settings: Settings
+) -> bool:
     d = settings.no_import_duration
-    begin = now - timedelta(hours=d.hour, minutes=d.minute, seconds=d.second)
+    dduration = timedelta(hours=d.hour, minutes=d.minute, seconds=d.second)
+    begin = now - dduration
 
-    serie = power.get(now, d)
-
-    if len(serie) == 0:
-        logger.warning(" serie is empty")
+    # check get all the values in the time window
+    if consumption.is_empty() or consumption.first_key() > begin:
         return False
 
-    if begin - serie[0].timestamp < timedelta(seconds=1):
-        logger.warning("not enough data")
+    ts = consumption.slice(begin, now)
+
+    logger.debug(f"is no importing {ts}")
+
+    return (
+        ts.threshold(settings.no_import_watts).distribution(normalized=True)[False] == 1
+    )
+
+
+def is_enough_sun(
+    now: datetime, production_watts: traces.TimeSeries, settings: Settings
+) -> bool:
+    d = settings.is_enough_sun_duration
+    dduration = timedelta(hours=d.hour, minutes=d.minute, seconds=d.second)
+    begin = now - dduration
+
+    # check get all the values in the time window
+    if production_watts.is_empty() or production_watts.first_key() > begin:
         return False
 
-    def importing(sample: PowerData) -> bool:
-        return (
-            sample.timestamp > begin
-            and sample.timestamp < now
-            and sample.imported_from_grid.ToWatts() > settings.no_import_watts
-        )
+    ts = production_watts.slice(begin, now)
 
-    serie = list(filter(importing, serie))
-
-    logger.debug(f"is no importing {len(serie)} :  {serie}")
-
-    return len(serie) == 0
+    logger.debug(f"is enough sun {ts}")
+    enough = (
+        ts.threshold(settings.is_enough_sun_minimal_watts).distribution(
+            normalized=True
+        )[True]
+        == 1
+    )
+    logger.info(f"is enough sun {enough}")
+    return enough
 
 
 def switch_on_since(
     now: datetime, switch_state_history: List[SwitchHistory], duration: timedelta
-):
-    if len(switch_state_history) == 0:
-        return False
-
-    if switch_state_history[-1] is False:
-        return False
+) -> bool:
 
     begin = now - duration
 
-    # get all elements in the time window + the first older one
-    state = list(reversed(switch_state_history))
-    last_index = -1
-    for i, sample in enumerate(state):
-        if sample.timestamp <= begin:
-            last_index = i + 1
-    if last_index < 0:
-        return False
-    state = state[0:last_index]
-
-    if len(state) == 0:
+    if len(switch_state_history) == 0:
         return False
 
-    def switch_is_off(sample: SwitchHistory) -> bool:
-        return sample.state is False
+    ts = traces.TimeSeries()
+    for switch_state in switch_state_history:
+        ts[switch_state.timestamp] = switch_state.state
 
-    serie = list(filter(switch_is_off, state))
-    return len(serie) == 0
+    ts = ts.slice(begin, now)
+
+    state_is_always_on = ts.distribution(normalized=True)[True] == 1
+    logger.info(f"is switch on since{state_is_always_on}")
+    return state_is_always_on
 
 
 def not_enought_consumption_when_switch_on(
     now: datetime,
-    power: Power,
+    net_consumption: traces.TimeSeries,
     switch_state_history: List[SwitchHistory],
     settings: Settings,
 ) -> bool:
@@ -191,15 +197,14 @@ def not_enought_consumption_when_switch_on(
     duration = settings.no_production_when_switch_on
     begin = now - duration
 
-    serie = power.get(now, time(minute=duration.microseconds))
-
-    if len(serie) == 0:
-        logger.warning(" serie is empty")
+    if net_consumption.is_empty() or net_consumption.first_key() > begin:
         return False
 
-    if begin - serie[0].timestamp < timedelta(seconds=1):
-        logger.warning("not enough data")
-        return False
+    not_enough = (
+        net_consumption.threshold(consumption).distribution(normalized=True)[False] == 1
+    )
+    logger.info(f"not_enought_consumption_when_switch_on {not_enough}")
+    return not_enough
 
     def not_enough_cons(sample: PowerData) -> bool:
         return (
@@ -211,6 +216,3 @@ def not_enought_consumption_when_switch_on(
             )
             > consumption
         )
-
-    serie = list(filter(not_enough_cons, serie))
-    return len(serie) == 0

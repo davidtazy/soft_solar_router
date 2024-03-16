@@ -8,5 +8,5 @@ rsync --archive  --perms   \
            --exclude '.vscode'   \
            --exclude 'sync.sh' \
            --exclude 'soft_solar_router.log' \
-           . david@192.168.1.47:~/soft_solar_router
+           . david@home-server:~/soft_solar_router
 

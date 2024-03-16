@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 from dataclasses import dataclass
-from typing import List, Union
-from .power import PowerUnit, EnergyUnit
+from typing import List
+from .power import PowerUnit
 
 
 @dataclass
@@ -15,8 +15,8 @@ class BatteryData:
 
 class Battery(ABC):
     @abstractmethod
-    def get(self, now: datetime, duration: time) -> List[BatteryData]:
-        """get the n last values from now - duration"""
+    def get(self, now: datetime) -> List[BatteryData]:
+        """get the n last values from now"""
         pass
 
     @abstractmethod

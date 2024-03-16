@@ -18,3 +18,6 @@ class Settings:
     no_import_watts: int = 0
     no_production_when_switch_on: timedelta = timedelta(minutes=0)
     water_heater_consumption_watts: int = 0
+
+    is_enough_sun_duration: time = time(minute=0)
+    is_enough_sun_minimal_watts: int = 0

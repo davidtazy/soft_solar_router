@@ -15,7 +15,7 @@ logging.basicConfig(
 logging.info("----- Start application -----")
 
 power = Envoy(
-    host="192.168.1.44",
+    host="envoy",
     token=os.getenv("ENVOY_TOKEN"),
     max_duration=time(second=30),
 )
@@ -25,7 +25,7 @@ while True:
     now = datetime.now()
     sample = power.update(now)
 
-    serie = power.get(now, duration=time(20))
+    serie = power.get(now)
 
     logging.info(sample)
     logging.info(len(serie))

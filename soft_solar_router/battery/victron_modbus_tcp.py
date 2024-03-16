@@ -10,7 +10,6 @@ from soft_solar_router.application.interfaces.battery import (
     Battery,
     BatteryData,
     PowerUnit,
-    EnergyUnit,
 )
 
 logger = logging.getLogger("victron_modbus_tcp")
@@ -20,7 +19,7 @@ class VictronModbusTcp(Battery):
     def __init__(self, host, max_duration: time) -> None:
         Defaults.Timeout = 25
         Defaults.Retries = 5
-        self.client = ModbusClient(host, port='502')
+        self.client = ModbusClient(host, port="502")
         self.duration = timedelta(
             hours=max_duration.hour,
             minutes=max_duration.minute,
@@ -28,13 +27,11 @@ class VictronModbusTcp(Battery):
         )
         self.serie = []
 
-    def get(self, now: datetime, duration: time) -> List[BatteryData]:
+    def get(self, now: datetime) -> List[BatteryData]:
         self.constraint_serie(now)
         return self.serie
 
     def update(self, now: datetime) -> BatteryData:
-
-        
 
         sample = BatteryData(
             timestamp=now,
@@ -45,31 +42,29 @@ class VictronModbusTcp(Battery):
         self.serie.append(sample)
 
         self.constraint_serie(now)
+        logger.debug(sample)
         return sample
 
     def read_power(self) -> PowerUnit:
         result = self.client.read_input_registers(842, 2)
         decoder = BinaryPayloadDecoder.fromRegisters(
-            result.registers,
-            byteorder=Endian.Big
-            )
-        return decoder.decode_16bit_int()
+            result.registers, byteorder=Endian.Big
+        )
+        return PowerUnit.FromWatts(decoder.decode_16bit_int())
 
     def read_soc(self) -> int:
         result = self.client.read_input_registers(843, 2)
         decoder = BinaryPayloadDecoder.fromRegisters(
-            result.registers,
-            byteorder=Endian.Big
-            )
+            result.registers, byteorder=Endian.Big
+        )
         return decoder.decode_16bit_uint()
 
     def read_state(self) -> str:
 
         result = self.client.read_input_registers(844, 2)
         decoder = BinaryPayloadDecoder.fromRegisters(
-            result.registers,
-            byteorder=Endian.Big
-            )
+            result.registers, byteorder=Endian.Big
+        )
         state_id = decoder.decode_16bit_uint()
         state = "Idle"
         if state_id == 1:

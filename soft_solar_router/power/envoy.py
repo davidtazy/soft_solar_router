@@ -25,7 +25,7 @@ class Envoy(Power):
         )
         self.serie = []
 
-    def get(self, now: datetime, duration: time) -> List[PowerData]:
+    def get(self, now: datetime) -> List[PowerData]:
         self.constraint_serie(now)
         return self.serie
 
@@ -73,7 +73,8 @@ class Envoy(Power):
         response = requests.get(url, headers=headers, verify=False)
         response.raise_for_status()
         response = response.json()
-        return EnergyUnit.FromWattHours(response["wattHoursToday"])
+        print(response)
+        return EnergyUnit.FromWattHours(response["wattHoursToday"])  # wattHoursLifetime
 
     def constraint_serie(self, now: datetime):
         def fresh_data(sample: PowerData):

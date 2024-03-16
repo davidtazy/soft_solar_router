@@ -10,8 +10,14 @@ from dotenv import load_dotenv
 from soft_solar_router.application.interfaces.grid import Grid
 from soft_solar_router.application.interfaces.monitoring import MonitorData, Monitoring
 from soft_solar_router.application.interfaces.notifications import Notifications
+from soft_solar_router.application.interfaces.battery import Battery
 from soft_solar_router.monitoring.fake import FakeMonitoring
 from soft_solar_router.monitoring import influx
+from soft_solar_router.application.utils import (
+    merge_consumptions,
+    extract_solar_prod,
+    home_consumptions,
+)
 
 from soft_solar_router.application.state_machine import (
     SolarRouterStateMachine,
@@ -24,6 +30,7 @@ from soft_solar_router.application.events import (
     is_sunny_now,
     is_no_importing,
     is_too_much_import,
+    is_enough_sun,
     not_enought_consumption_when_switch_on,
 )
 from soft_solar_router.application.interfaces.switch import Switch
@@ -39,6 +46,8 @@ from soft_solar_router.switch.fake import FakeSwitch
 from soft_solar_router.grid.edf import Edf
 
 from soft_solar_router.notifications.ntfy import Ntfy
+
+from soft_solar_router.battery.victron_modbus_tcp import VictronModbusTcp
 
 from .poller import Poller
 
@@ -77,6 +86,8 @@ def main():
         solar_time_end=time(hour=15, minute=30),
         no_production_when_switch_on=timedelta(minutes=3),
         water_heater_consumption_watts=2000,
+        is_enough_sun_duration=time(minute=1),
+        is_enough_sun_minimal_watts=1100,
     )
 
     # build
@@ -102,6 +113,11 @@ def main():
         minutes=1
     )
 
+    battery = VictronModbusTcp(
+        host="192.168.1.41",
+        max_duration=time(minute=15),
+    )
+
     if dry_run:
         switch = FakeSwitch(history_duration=switch_history_duration)
         monitoring = FakeMonitoring()
@@ -115,8 +131,8 @@ def main():
             api_key=api_key,
             device_id="1000bb555e",
         )
-        #disable switch command
-        switch = FakeSwitch(history_duration=switch_history_duration)
+        # disable switch command
+        # switch = FakeSwitch(history_duration=switch_history_duration)
 
         if not influx_token:
             raise ValueError("env values influx_token not set")
@@ -141,6 +157,7 @@ def main():
             monitoring,
             grid,
             ntf,
+            battery,
         )
         sleep(1)
 
@@ -157,6 +174,7 @@ def run(
     monitoring: Monitoring,
     grid: Grid,
     ntf: Notifications,
+    battery: Battery,
 ):
     monitor_data = MonitorData(now)
 
@@ -166,6 +184,10 @@ def run(
         monitor_data.power_import = sample.imported_from_grid
         monitor_data.instant_solar_production = sample.instant_solar_production
         monitor_data.total_solar_production = sample.total_solar_production
+
+        sample = battery.update(now=now)
+        monitor_data.instant_battery_soc = sample.soc_percent
+        monitor_data.instant_battery_power = sample.instant_power
 
     if sm_poller.poll(now):
         logging.debug("generate forced events")
@@ -191,16 +213,23 @@ def run(
             ntf.on_stop_sunny(now)
 
         logging.debug("generate import event")
-        if is_too_much_import(now, power, settings):
+
+        imported = merge_consumptions(now, power, battery)
+
+        if is_too_much_import(now, imported, settings):
             logging.debug("too_much_import events")
             sm.event_too_much_import()
 
-        if is_no_importing(now, power, settings):
-            logging.debug("no_importing events")
+        solar_prod = extract_solar_prod(now, power)
+        if is_no_importing(now, imported, settings) and is_enough_sun(
+            now, solar_prod, settings
+        ):
+            logging.debug("no_importing events and enough sun")
             sm.event_no_importing()
 
+        home_loads_consumption = home_consumptions(now, battery=battery, power=power)
         if not_enought_consumption_when_switch_on(
-            now, power, switch.history(), settings
+            now, home_loads_consumption, switch.history(), settings
         ):
             sm.event_not_enought_consumption_when_switch_on()
 

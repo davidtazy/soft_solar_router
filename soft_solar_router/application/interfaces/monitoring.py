@@ -16,6 +16,8 @@ class MonitorData:
     total_solar_production: Optional[EnergyUnit] = None
     switch_state: Optional[bool] = None
     soft_solar_router_state: Optional[str] = None
+    instant_battery_soc: Optional[int] = None
+    instant_battery_power: Optional[PowerUnit] = None
 
     def is_empty(self) -> bool:
         return len(self.to_dict()) <= 1
