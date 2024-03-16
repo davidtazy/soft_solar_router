@@ -6,6 +6,8 @@
 pilot water heater power switch 
 - during solar panel production 
 - during grid discount hours when tomorrow is cloudy
+- during grid discount hours when tomorrow is over taxed
+
 
 ## weather module
 Get the solar irradiance for the next 2 days 
@@ -22,9 +24,10 @@ hold the application settings
 - turn on
 - turn off
 
--  the schedule (depends of weather interface): 
-     - give  the sunny period of the next 3 days 
-     - give the forced switch on power
+## battery
+- get the state of charge (in percent)
+- get the state (charging, discharging, idle)
+- get the instant power ( positive is charginf)
 
 ## monitoring module
 - push monitoring data to influxdb server
@@ -33,7 +36,7 @@ hold the application settings
 
 ### events.py
 
-from weather, power and settings modules, events.py contains methods to generates events
+from weather, power, battery and settings modules, events.py contains methods to generates events
 
 #### event_start_sunny/event_stop_sunny:
 - is_sunny_now(weather: Weather, now: datetime, settings: Settings) -> bool
@@ -52,6 +55,9 @@ from weather, power and settings modules, events.py contains methods to generate
 #### event_no_importing
 - is_no_importing(now: datetime, power: Power, settings: Settings) -> bool:
     return True when grid import < **settings.no_import_watts** during **settings.no_import_duration** 
+
+#### event_is_enough_sun
+- return True when estimates solar production is enough to switch on
 
 ### state_machine.py
 
