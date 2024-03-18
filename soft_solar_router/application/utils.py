@@ -42,7 +42,7 @@ def home_consumptions(now: datetime, power: Power, battery: Battery):
     battery_export_serie = traces.TimeSeries(default=0)
     for sample in battery.get(now=now):
         battery_power_watts = sample.instant_power.ToWatts()
-        battery_export_serie[sample.timestamp] = battery_power_watts
+        battery_export_serie[sample.timestamp] = -battery_power_watts
 
     trace_list = [grid_import_serie, battery_export_serie, solar_prod_serie]
     merged = traces.TimeSeries.merge(trace_list, operation=sum)

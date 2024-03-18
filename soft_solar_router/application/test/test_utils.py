@@ -46,9 +46,9 @@ def test_home_consumption():
         now=now,
         duration=dduration,
     )
-    battery = BatteryTestable.GenerateNet(PowerUnit.FromWatts(-999), now, duration)
+    battery = BatteryTestable.GenerateNet(PowerUnit.FromWatts(999), now, duration)
 
     home = home_consumptions(now=now, power=power, battery=battery)
 
-    assert home.distribution().min(include_zero=True) == 0
-    assert home.distribution().max() == 3
+    assert home.distribution().min(include_zero=True) == -1
+    assert home.distribution().max() == 0
