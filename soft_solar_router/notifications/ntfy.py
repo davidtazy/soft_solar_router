@@ -53,3 +53,6 @@ class Ntfy(Notifications):
             self.notify(
                 "Demarrage du chauffe eau par edf. \ncar demain jour ROUGE ou nuageux"
             )
+
+    def on_fatal_error(self, now: datetime.datetime, message: str) -> None:
+        self.notify(f"Fatal Error: {message}")

@@ -247,4 +247,5 @@ try:
     main()
 except Exception as e:
     logging.exception(e)
+    Ntfy().on_fatal_error(str(e))
     raise e

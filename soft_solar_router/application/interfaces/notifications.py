@@ -33,3 +33,7 @@ class Notifications(ABC):
     @abstractmethod
     def on_start_forced(self, now: datetime.datetime) -> None:
         pass
+
+    @abstractmethod
+    def on_fatal_error(self, now: datetime.datetime, message: str) -> None:
+        pass
