@@ -1,49 +1,26 @@
-from datetime import timedelta, datetime
-from soft_solar_router.switch.sonoff import SonOff, state_switch
-from dotenv import load_dotenv
-import os
 import logging
-import argparse
-import sys
+from datetime import timedelta, datetime
+import time
+
+from soft_solar_router.switch.shelly1pro import Shelly1Pro
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format="%(asctime)s %(name)s %(levelname)s  %(message)s",
 )
 
-parser = argparse.ArgumentParser()
 
-group = parser.add_mutually_exclusive_group()
-group.add_argument("--on", action="store_true")
-group.add_argument("--off", action="store_true")
-group.add_argument("--state", action="store_true")
+ip = "192.168.1.43"
+id = "0"
+delta = timedelta(minutes=1)
+switch = Shelly1Pro(delta, ip, id)
 
-args = parser.parse_args()
-if not args.on and not args.off and not args.state:
-    parser.print_help()
-    sys.exit(2)
+logging.debug("switch on")
+switch.set(datetime.now(), True)
+logging.debug("done")
 
-load_dotenv()
-ip_address = "192.168.1.50"
-api_key = os.getenv("SONOFF_API_KEY")
-device_id = "1000bb555e"  # not really required
+time.sleep(3)
 
-if api_key is None:
-    sys.exit(1)
-
-switch = SonOff(
-    history_duration=timedelta(minutes=3),
-    ip_address=ip_address,
-    api_key=api_key,
-    device_id=device_id,
-)
-
-
-logging.info(args)
-
-now = datetime.now()
-
-if args.on or args.off:
-    switch.set(now, args.on)
-else:
-    print(state_switch(api_key, device_id, ip_address))
+logging.debug("switch off")
+switch.set(datetime.now(), False)
+logging.debug("done")

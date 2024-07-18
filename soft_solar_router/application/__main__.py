@@ -132,7 +132,7 @@ def main():
             device_id="1000bb555e",
         )
         # disable switch command
-        # switch = FakeSwitch(history_duration=switch_history_duration)
+        switch = FakeSwitch(history_duration=switch_history_duration)
 
         if not influx_token:
             raise ValueError("env values influx_token not set")

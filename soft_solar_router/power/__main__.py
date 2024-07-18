@@ -4,6 +4,7 @@ from datetime import time, datetime
 from time import sleep
 from soft_solar_router.power.envoy import Envoy
 from dotenv import load_dotenv
+import sys
 
 load_dotenv()
 
@@ -21,12 +22,19 @@ power = Envoy(
 )
 
 
-while True:
-    now = datetime.now()
-    sample = power.update(now)
+now = datetime.now()
 
-    serie = power.get(now)
+response = power.request_test()
 
-    logging.info(sample)
-    logging.info(len(serie))
-    sleep(3)
+print(response)
+
+
+sys.exit(0)
+
+
+sample = power.update(now)
+serie = power.get(now)
+
+logging.info(sample)
+logging.info(len(serie))
+sleep(3)

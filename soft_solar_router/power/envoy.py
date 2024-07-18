@@ -15,6 +15,8 @@ logger = logging.getLogger("envoy")
 
 
 class Envoy(Power):
+    """see https://enphase.com/download/accessing-iq-gateway-local-apis-or-local-ui-token-based-authentication"""
+
     def __init__(self, host, token, max_duration: time) -> None:
         self.host = host
         self.token = token
@@ -45,16 +47,8 @@ class Envoy(Power):
         return sample
 
     def instant_measures(self) -> Tuple[PowerUnit, PowerUnit]:
-        url = f"https://{self.host}/ivp/meters/readings"
-        headers = {
-            "Authorization": f"Bearer {self.token}",
-            "Accept": "application/json",
-        }
 
-        response = requests.get(url, headers=headers, verify=False, timeout=5)
-        response.raise_for_status()
-        response = response.json()
-
+        response = self.request_instant_measures()
         production = PowerUnit.FromWatts(response[0]["activePower"])
         net = PowerUnit.FromWatts(response[1]["activePower"])
         # consumption_wh = production_wh + net_wh
@@ -65,6 +59,23 @@ class Envoy(Power):
 
     @cachetools.func.ttl_cache(maxsize=1, ttl=30)
     def total_solar_production(self) -> EnergyUnit:
+
+        response = self.request_solar_production()
+        return EnergyUnit.FromWattHours(response["wattHoursToday"])  # wattHoursLifetime
+
+    def request_instant_measures(self):
+        url = f"https://{self.host}/ivp/meters/readings"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json",
+        }
+
+        response = requests.get(url, headers=headers, verify=False, timeout=5)
+        response.raise_for_status()
+        response = response.json()
+        return response
+
+    def request_solar_production(self):
         url = f"https://{self.host}/api/v1/production"
         headers = {
             "Authorization": f"Bearer {self.token}",
@@ -73,8 +84,19 @@ class Envoy(Power):
         response = requests.get(url, headers=headers, verify=False)
         response.raise_for_status()
         response = response.json()
-        print(response)
-        return EnergyUnit.FromWattHours(response["wattHoursToday"])  # wattHoursLifetime
+        return response
+
+    def request_test(self):
+
+        url = f"https://{self.host}/ivp/meters/reports/consumption"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json",
+        }
+        response = requests.get(url, headers=headers, verify=False)
+        response.raise_for_status()
+        response = response.json()
+        return response
 
     def constraint_serie(self, now: datetime):
         def fresh_data(sample: PowerData):

@@ -221,7 +221,11 @@ class SonOff(Switch):
             self.state = state
             target_state = "on" if state else "off"
             err = change_switch(
-                self.api_key, self.device_id, self.ip_address, None, target_state
+                api_key=self.api_key,
+                device_id=self.device_id,
+                ip_address=self.ip_address,
+                outlet=None,
+                on_request=target_state,
             )
             logging.info(err)
 
