@@ -40,8 +40,9 @@ from soft_solar_router.application.interfaces.weather import Weather
 from soft_solar_router.weather.open_meteo import OpenMeteo
 from soft_solar_router.power.envoy import Envoy
 
-from soft_solar_router.switch.sonoff import SonOff
+# from soft_solar_router.switch.sonoff import SonOff
 from soft_solar_router.switch.fake import FakeSwitch
+from soft_solar_router.switch.shelly1pro import Shelly1Pro
 
 from soft_solar_router.grid.edf import Edf
 
@@ -125,14 +126,21 @@ def main():
         api_key = os.getenv("SONOFF_API_KEY")
         if not api_key:
             raise ValueError("SONOFF_API_KEY not defined")
-        switch = SonOff(
+        # switch = SonOff(
+        #    history_duration=switch_history_duration,
+        #    ip_address="192.168.1.27",
+        #    api_key=api_key,
+        #    device_id="1000bb555e",
+        # )
+
+        switch = Shelly1Pro(
             history_duration=switch_history_duration,
-            ip_address="192.168.1.27",
-            api_key=api_key,
-            device_id="1000bb555e",
+            ip_address="192.168.1.37",
+            device_id=0,
         )
+
         # disable switch command
-        switch = FakeSwitch(history_duration=switch_history_duration)
+        # switch = FakeSwitch(history_duration=switch_history_duration)
 
         if not influx_token:
             raise ValueError("env values influx_token not set")

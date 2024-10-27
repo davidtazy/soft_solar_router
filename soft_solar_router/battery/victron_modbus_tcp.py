@@ -17,6 +17,20 @@ logger = logging.getLogger("victron_modbus_tcp")
 
 class VictronModbusTcp(Battery):
     def __init__(self, host, max_duration: time) -> None:
+        """
+        Initialize the Victron Modbus TCP client.
+
+        Parameters:
+            host (str): The host IP address.
+            max_duration (time): The maximum duration of the time series. older data
+                that are older than `max_duration` will be discarded.
+
+        Initializes the Modbus client with the given host and port, sets the timeout
+        and retries, and initializes the duration and serie.
+
+        Returns:
+            None
+        """
         Defaults.Timeout = 25
         Defaults.Retries = 5
         self.client = ModbusClient(host, port="502")
@@ -74,6 +88,16 @@ class VictronModbusTcp(Battery):
         return state
 
     def constraint_serie(self, now: datetime):
+        """
+        remove from serie all the sample older than duration
+
+        given a datetime `now`, this function will remove all the BatteryData
+        from the serie that are older than `now` - `duration`.
+
+        This is typically used to remove old data from the serie when a new
+        BatteryData is available
+        """
+
         def fresh_data(sample: BatteryData):
             return sample.timestamp > now - self.duration
 
