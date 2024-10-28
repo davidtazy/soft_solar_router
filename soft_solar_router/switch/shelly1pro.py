@@ -14,8 +14,11 @@ return
 """
 
 import requests
+import logging
 from datetime import timedelta
 from soft_solar_router.application.interfaces.switch import Switch
+
+logger = logging.getLogger("shelly1pro")
 
 
 class Shelly1Pro(Switch):
@@ -31,8 +34,20 @@ class Shelly1Pro(Switch):
         self.device_id = device_id
 
     def _set(self, state: bool) -> None:
+        """not requesting the current state allow to manually force power on.
+        it is assumed"""
+
+        # get the current state
+        if self.state is None:
+            response = requests.get(f"http://{self.ip_address}/relay/{self.device_id}")
+            response.raise_for_status()
+            status = response.json()
+            self.state = status["ison"]
+            logger.debug(f"state is {state}")
+
+        # apply if switch needed
         if state != self.state:
-            state_str = "true" if self.state else "false"
+            state_str = "true" if state else "false"
             response = requests.get(
                 f"http://{self.ip_address}/rpc/Switch.Set"
                 f"?id={self.device_id}&on={state_str}"
