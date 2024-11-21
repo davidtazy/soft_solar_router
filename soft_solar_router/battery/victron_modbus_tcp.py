@@ -59,6 +59,20 @@ class VictronModbusTcp(Battery):
         logger.debug(sample)
         return sample
 
+    def read_battery_life_state(self) -> int:
+        result = self.client.read_input_registers(2900, 2)
+        decoder = BinaryPayloadDecoder.fromRegisters(
+            result.registers, byteorder=Endian.Big
+        )
+        return decoder.decode_16bit_uint()
+
+    def read_ess_mode(self) -> int:
+        result = self.client.read_input_registers(2902, 2)
+        decoder = BinaryPayloadDecoder.fromRegisters(
+            result.registers, byteorder=Endian.Big
+        )
+        return decoder.decode_16bit_uint()
+
     def read_power(self) -> PowerUnit:
         result = self.client.read_input_registers(842, 2)
         decoder = BinaryPayloadDecoder.fromRegisters(
