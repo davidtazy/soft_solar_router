@@ -5,11 +5,11 @@ import logging
 
 from soft_solar_router.application.interfaces.grid import Grid
 
-logger = logging.getLogger("edf")
+logger = logging.getLogger("api_couleur_tempo")
 
 
-class Edf(Grid):
-    TEMPO_ROUGE = "TEMPO_ROUGE"
+class ApiCouleurTempo(Grid):
+    TEMPO_ROUGE = 3
 
     def __init__(self):
         self.cache = {}
@@ -23,15 +23,15 @@ class Edf(Grid):
     def is_red_tomorrow(self, now: datetime) -> Optional[bool]:
         tomorrow = self.tomorrow(now.date())
         if self.cache.get(tomorrow) is None:
-            self.update(now.date())
+            self.update(tomorrow)
         return self.cache.get(tomorrow) == self.TEMPO_ROUGE
 
     def update(self, now: date):
         logger.info(f"request tempo for {now}")
         today = now.strftime("%Y-%m-%d")
+
         r = requests.get(
-            "https://particulier.edf.fr/services/rest/"
-            f"referentiel/searchTempoStore?dateRelevant={today}",
+            f"https://www.api-couleur-tempo.fr/api/jourTempo/{today}",
         )
         if r.status_code != 200:
             logger.error(f"failed to request tempo {r.status_code}")
@@ -40,11 +40,8 @@ class Edf(Grid):
 
         logger.info(ret)
 
-        if ret["couleurJourJ"] != "NON_DEFINI":
-            self.cache[now] = ret["couleurJourJ"]
-        tomorrow = self.tomorrow(now)
-        if ret["couleurJourJ1"] != "NON_DEFINI":
-            self.cache[tomorrow] = ret["couleurJourJ1"]
+        if ret["codeJour"] != 0:
+            self.cache[now] = ret["codeJour"]
 
     @staticmethod
     def tomorrow(now: date):

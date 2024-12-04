@@ -45,7 +45,7 @@ from soft_solar_router.switch.fake import FakeSwitch
 from soft_solar_router.switch.shelly1pro import Shelly1Pro
 
 # from soft_solar_router.grid.edf import Edf
-from soft_solar_router.grid.influx import Influx as Edf
+from soft_solar_router.grid.api_couleur_tempo import ApiCouleurTempo as Edf
 
 from soft_solar_router.notifications.ntfy import Ntfy
 
@@ -150,7 +150,7 @@ def main():
         if not influx_org:
             raise ValueError("env values influx_org not set")
         monitoring = influx.Influx(influx_url, influx_org, influx_token)
-        grid = Edf(influx_url, influx_org, influx_token)
+        grid = Edf()
 
     # run event loop
     while True:
