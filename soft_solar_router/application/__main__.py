@@ -220,7 +220,8 @@ def run(
             ntf.on_start_sunny(now)
         else:
             sm.event_stop_sunny()
-            ntf.on_stop_sunny(now)
+            solar_heater_powered_on_duration = monitoring.get_solar_heater_powered_on_duration()
+            ntf.on_stop_sunny(now,solar_heater_powered_on_duration)
 
         logging.debug("generate import event")
 

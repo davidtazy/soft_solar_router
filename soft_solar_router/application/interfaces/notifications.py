@@ -27,7 +27,7 @@ class Notifications(ABC):
         pass
 
     @abstractmethod
-    def on_stop_sunny(self, now: datetime.datetime) -> None:
+    def on_stop_sunny(self, now: datetime.datetime,solar_heater_powered_on_duration: datetime.timedelta) -> None:
         pass
 
     @abstractmethod

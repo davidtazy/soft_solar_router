@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, fields
 
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from .power import EnergyUnit, PowerUnit
@@ -51,4 +51,8 @@ class MonitorData:
 class Monitoring(ABC):
     @abstractmethod
     def push(self, measure: MonitorData) -> int:
+        pass
+
+    @abstractmethod
+    def get_solar_heater_powered_on_duration(self)-> timedelta:
         pass

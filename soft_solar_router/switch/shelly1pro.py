@@ -37,20 +37,25 @@ class Shelly1Pro(Switch):
         """not requesting the current state allow to manually force power on.
         it is assumed"""
 
-        # get the current state
-        if self.state is None:
-            response = requests.get(f"http://{self.ip_address}/relay/{self.device_id}")
-            response.raise_for_status()
-            status = response.json()
-            self.state = status["ison"]
-            logger.debug(f"state is {state}")
+        try:
 
-        # apply if switch needed
-        if state != self.state:
-            state_str = "true" if state else "false"
-            response = requests.get(
-                f"http://{self.ip_address}/rpc/Switch.Set"
-                f"?id={self.device_id}&on={state_str}"
-            )
-            response.raise_for_status()
-            self.state = state
+            # get the current state
+            if self.state is None:
+                response = requests.get(f"http://{self.ip_address}/relay/{self.device_id}")
+                response.raise_for_status()
+                status = response.json()
+                self.state = status["ison"]
+                logger.debug(f"state is {state}")
+
+            # apply if switch needed
+            if state != self.state:
+                state_str = "true" if state else "false"
+                response = requests.get(
+                    f"http://{self.ip_address}/rpc/Switch.Set"
+                    f"?id={self.device_id}&on={state_str}"
+                )
+                response.raise_for_status()
+                self.state = state
+
+        except Exception as e:
+            logger.error(e)

@@ -66,3 +66,30 @@ class Influx(Grid):
             |> sort(columns: ["_time"], desc: true)
             |> limit(n: 1)
             """
+    
+    def get_solar_heater_powered_on_duration(self) -> typing.Optional[str]:
+        # Execute the query
+        query_api = self.client.query_api()
+        result = query_api.query(self._solar_heater_powered_on_duration())
+
+        # Extract the result
+        if result:
+            for table in result:
+                for record in table.records:
+                    return record.get_value()
+
+        else:
+            logger.error(" get_solar_heater_powered_on_duration - No data found.")
+        return None
+
+    @staticmethod
+    def _solar_heater_powered_on_duration():
+        return f"""
+        from(bucket: "teleinfo")
+            |> range(start: -12h)
+            |> filter(fn: (r) => r._measurement == "switch_state")
+            |> toInt()
+            |> stateDuration(column: "_value", fn: (r)=> r._value == 1)
+            |> aggregateWindow(every:1d,       fn: sum)
+            |> yield(name: "count")
+        """

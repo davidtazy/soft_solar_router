@@ -46,18 +46,29 @@ class VictronModbusTcp(Battery):
         return self.serie
 
     def update(self, now: datetime) -> BatteryData:
-
+        
         sample = BatteryData(
             timestamp=now,
-            instant_power=self.read_power(),
-            soc_percent=self.read_soc(),
-            state=self.read_state(),
+            instant_power=PowerUnit.FromWatts(0),
+            soc_percent=-11,
+            state="error",
         )
+        
+        try:
+            sample = BatteryData(
+                timestamp=now,
+                instant_power=self.read_power(),
+                soc_percent=self.read_soc(),
+                state=self.read_state(),
+            )
+        except Exception as e:
+            logger.error(e)
+      
         self.serie.append(sample)
-
         self.constraint_serie(now)
         logger.debug(sample)
         return sample
+    
 
     def read_battery_life_state(self) -> int:
         result = self.client.read_input_registers(2900, 2)
