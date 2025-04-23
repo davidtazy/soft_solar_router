@@ -30,9 +30,14 @@ class ApiCouleurTempo(Grid):
         logger.info(f"request tempo for {now}")
         today = now.strftime("%Y-%m-%d")
 
-        r = requests.get(
-            f"https://www.api-couleur-tempo.fr/api/jourTempo/{today}",
-        )
+        try:
+            r = requests.get(
+                f"https://www.api-couleur-tempo.fr/api/jourTempo/{today}",
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(f"failed to request tempo {e}")
+            return
+
         if r.status_code != 200:
             logger.error(f"failed to request tempo {r.status_code}")
             return

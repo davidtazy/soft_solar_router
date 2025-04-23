@@ -10,6 +10,7 @@ import humanize
 logger = logging.getLogger("nty")
 
 NTFY_TOPIC_NAME = "tazy_soft_solar_router"
+NTFY_TOPIC_ERROR_NAME = "tazy_soft_solar_router_error"
 
 
 class Ntfy(Notifications):
@@ -19,9 +20,15 @@ class Ntfy(Notifications):
     stop_sunny_ntf = Notifier()
 
     def notify(self, msg: str):
+        self._notify(msg, NTFY_TOPIC_NAME)
+
+    def notify_error(self, msg: str):
+        self._notify(msg, NTFY_TOPIC_ERROR_NAME)
+
+    def _notify(self, msg: str, topic: str):
         try:
             requests.post(
-                f"https://ntfy.sh/{NTFY_TOPIC_NAME}",
+                f"https://ntfy.sh/{topic}",
                 data=msg.encode(encoding="utf-8"),
             )
         except Exception as e:
@@ -57,4 +64,4 @@ class Ntfy(Notifications):
             )
 
     def on_fatal_error(self, now: datetime.datetime, message: str) -> None:
-        self.notify(f"Fatal Error: {message}")
+        self.notify_error(f"Fatal Error: {message}")

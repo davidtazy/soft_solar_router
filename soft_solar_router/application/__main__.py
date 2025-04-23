@@ -1,5 +1,6 @@
 import argparse
 from datetime import datetime, time, timedelta
+import sys
 from time import sleep
 import logging
 from logging.handlers import RotatingFileHandler
@@ -258,5 +259,5 @@ try:
     main()
 except Exception as e:
     logging.exception(e)
-    Ntfy().on_fatal_error(str(e))
-    raise e
+    Ntfy().on_fatal_error(datetime.now(),str(e))
+    sys.exit(1)
