@@ -30,6 +30,7 @@ from soft_solar_router.application.events import (
     is_cloudy_tomorrow,
     is_sunny_now,
     is_no_importing,
+    is_sunny_period_window,
     is_too_much_import,
     is_enough_sun,
     not_enought_consumption_when_switch_on,
@@ -86,7 +87,7 @@ def main():
         no_import_duration=time(minute=5),
         no_import_watts=300,
         solar_time_begin=time(hour=11, minute=30),
-        solar_time_end=time(hour=15, minute=30),
+        solar_time_end=time(hour=16, minute=30),
         no_production_when_switch_on=timedelta(minutes=3),
         water_heater_consumption_watts=2000,
         is_enough_sun_duration=time(minute=1),
@@ -216,7 +217,7 @@ def run(
             sm.event_stop_forced()
 
         logging.debug("generate sunny events")
-        if not grid.is_red_today(now) and is_sunny_now(weather, now, settings):
+        if not grid.is_red_today(now) and is_sunny_period_window(now, settings):
             sm.event_start_sunny()
             ntf.on_start_sunny(now)
         else:
