@@ -35,7 +35,9 @@ class Influx(Monitoring):
         if result:
             for table in result:
                 for record in table.records:
-                    return datetime.timedelta(seconds=int(record.get_value()))*60
+                    if record:
+                        return datetime.timedelta(seconds=int(record.get_value()))*60
+                    
 
         logger.error(" get_solar_heater_powered_on_duration - No data found.")
         return datetime.timedelta()
