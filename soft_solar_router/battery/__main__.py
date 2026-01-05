@@ -6,9 +6,9 @@ if True:
     from soft_solar_router.battery.victron_modbus_tcp import BatteryData
     import logging
 
-    if False:
+    if True:
         logging.basicConfig(
-            level=logging.DEBUG,
+            level=logging.INFO,
             format="%(asctime)s %(name)s %(levelname)s  %(message)s",
         )
 
@@ -16,6 +16,9 @@ if True:
 
     print(f"batteylife state { battery.read_battery_life_state()}")
     print(f"ess_mode { battery.read_ess_mode()}")
+    battery.ensure_min_soc(9)
+    print(f"min_soc { battery.read_min_soc()}")
+
     # print(f"battery { battery.update(datetime.now())}")
 if False:
 

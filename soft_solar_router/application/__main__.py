@@ -216,6 +216,17 @@ def run(
         else:
             sm.event_stop_forced()
 
+        # set min_soc according to grid and weather
+        if is_forced_period_window(now, settings) and (
+            grid.is_red_tomorrow(grid_now) 
+        ):
+            min_soc =  90 if is_cloudy_tomorrow(now, weather, settings) else 60
+        else:
+            min_soc = 5 if  grid.is_red_today(now) else 20
+        battery.ensure_min_soc(min_soc)
+
+
+
         logging.debug("generate sunny events")
         if not grid.is_red_today(now) and is_sunny_period_window(now, settings):
             sm.event_start_sunny()

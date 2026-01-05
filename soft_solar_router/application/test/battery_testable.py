@@ -44,3 +44,6 @@ class BatteryTestable(Battery):
 
     def update(self) -> None:
         pass
+    
+    def ensure_min_soc(self, value: float) -> None:
+        pass

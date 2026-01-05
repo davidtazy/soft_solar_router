@@ -22,3 +22,8 @@ class Battery(ABC):
     @abstractmethod
     def update(self, now: datetime) -> BatteryData:
         pass
+
+    @abstractmethod
+    def ensure_min_soc(self, value: float) -> None:
+        """Set the minimum SOC configured in the ESS."""
+        pass    

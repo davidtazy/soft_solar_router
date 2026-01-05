@@ -69,6 +69,18 @@ class VictronModbusTcp(Battery):
         logger.debug(sample)
         return sample
     
+    def ensure_min_soc(self, value: float) -> None:
+        """
+        Set the minimum SOC configured in the ESS.
+        """
+        try:
+            min_soc = self.read_min_soc()
+            if abs(min_soc - value) > 0.5:
+                logger.info(f"Updating min_soc from {min_soc} to {value}")
+                self.set_min_soc(value)
+        except Exception as e:
+            logger.error(e)
+    
 
     def read_battery_life_state(self) -> int:
         result = self.client.read_input_registers(2900, 2)
@@ -83,6 +95,25 @@ class VictronModbusTcp(Battery):
             result.registers, byteorder=Endian.Big
         )
         return decoder.decode_16bit_uint()
+
+    def read_min_soc(self) -> int:
+        """
+        Read the minimum SOC configured in the ESS.
+        """
+        result = self.client.read_input_registers(2901, 2)
+        decoder = BinaryPayloadDecoder.fromRegisters(
+            result.registers, byteorder=Endian.Big
+        )
+        return decoder.decode_16bit_uint() / 10
+
+    def set_min_soc(self, value: float) -> None:
+        """
+        Set the minimum SOC configured in the ESS.
+
+        Parameters:
+            value (float): The minimum SOC percentage (0-100).
+        """
+        self.client.write_register(2901, int(value * 10))
 
     def read_power(self) -> PowerUnit:
         result = self.client.read_input_registers(842, 2)
