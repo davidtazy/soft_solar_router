@@ -28,6 +28,7 @@ from soft_solar_router.application.interfaces.settings import Settings
 from soft_solar_router.application.events import (
     is_forced_period_window,
     is_cloudy_tomorrow,
+    is_low_hour_period_window,
     is_sunny_now,
     is_no_importing,
     is_sunny_period_window,
@@ -217,7 +218,7 @@ def run(
             sm.event_stop_forced()
 
         # set min_soc according to grid and weather
-        if is_forced_period_window(now, settings) and (
+        if is_low_hour_period_window(now) and (
             grid.is_red_tomorrow(grid_now) 
         ):
             min_soc =  90 if is_cloudy_tomorrow(now, weather, settings) else 60

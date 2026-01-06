@@ -55,6 +55,11 @@ def is_forced_period_window(now: datetime, settings: Settings):
         return now.hour >= begin and now.hour < end
     else:
         return now.hour >= begin or now.hour < end
+    
+def is_low_hour_period_window(now: datetime):
+    
+    return now.hour >= 22 or now.hour < 6
+  
 
 
 def get_tomorrow_date(now: datetime, settings: Settings) -> date:
