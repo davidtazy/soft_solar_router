@@ -56,6 +56,9 @@ from soft_solar_router.battery.victron_modbus_tcp import VictronModbusTcp
 
 from .poller import Poller
 
+from fastapi import FastAPI
+import uvicorn
+from apscheduler.schedulers.background import BackgroundScheduler
 
 load_dotenv()
 
@@ -69,11 +72,53 @@ logging.basicConfig(
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
-
+logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
 logging.info("----- Start application -----")
 
+app = FastAPI()
 
-def main():
+
+@app.get("/hello")
+def hello():
+    return {"message": "hello"}
+
+
+@app.get("/status")
+def status():
+    if sm is None:
+        return {"state": "unknown"}
+    
+    return {
+        "state": sm.current_state.name,
+        "expected_switch_state": sm.expected_switch_state,
+    }
+
+
+# Globals
+settings = None
+sm = None
+sm_poller = None
+power_poller = None
+weather = None
+power = None
+switch = None
+monitoring = None
+grid = None
+ntf = None
+battery = None
+
+
+def tick():
+    now = datetime.now()
+    try:
+        
+        periodic_task(settings, now, sm, sm_poller, power_poller, weather, power, switch, monitoring, grid, ntf, battery)
+    except Exception as e:
+        logging.exception(e)
+
+
+def init():
+    global settings, sm, sm_poller, power_poller, weather, power, switch, monitoring, grid, ntf, battery
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     dry_run = parser.parse_args().dry_run
@@ -140,7 +185,7 @@ def main():
         switch = Shelly1Pro(
             history_duration=switch_history_duration,
             ip_address="192.168.1.37",
-            device_id=0,
+            device_id="0",
         )
 
         # disable switch command
@@ -155,27 +200,8 @@ def main():
         monitoring = influx.Influx(influx_url, influx_org, influx_token)
         grid = Edf()
 
-    # run event loop
-    while True:
-        now = datetime.now()
-        run(
-            settings,
-            now,
-            sm,
-            sm_poller,
-            power_poller,
-            weather,
-            power,
-            switch,
-            monitoring,
-            grid,
-            ntf,
-            battery,
-        )
-        sleep(1)
 
-
-def run(
+def periodic_task(
     settings: Settings,
     now: datetime,
     sm: SolarRouterStateMachine,
@@ -269,7 +295,13 @@ def run(
 
 
 try:
-    main()
+    init()
+     # run event loop
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(tick, "interval", seconds=2)
+    scheduler.start()
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 except Exception as e:
     logging.exception(e)
     Ntfy().on_fatal_error(datetime.now(),str(e))
