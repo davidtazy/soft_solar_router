@@ -54,7 +54,6 @@ from soft_solar_router.notifications.ntfy import Ntfy
 
 from soft_solar_router.battery.victron_modbus_tcp import VictronModbusTcp
 
-from .poller import Poller
 
 from fastapi import FastAPI
 import uvicorn
@@ -97,8 +96,6 @@ def status():
 # Globals
 settings = None
 sm = None
-sm_poller = None
-power_poller = None
 weather = None
 power = None
 switch = None
@@ -108,17 +105,99 @@ ntf = None
 battery = None
 
 
-def tick():
+def update_power():
     now = datetime.now()
     try:
-        
-        periodic_task(settings, now, sm, sm_poller, power_poller, weather, power, switch, monitoring, grid, ntf, battery)
+        if power is None or battery is None or monitoring is None:
+            raise ValueError("power or battery interface not initialized")
+        monitor_data = MonitorData(now)
+        logging.debug("update power")
+        sample = power.update(now)
+        monitor_data.power_import = sample.imported_from_grid
+        monitor_data.instant_solar_production = sample.instant_solar_production
+        monitor_data.total_solar_production = sample.total_solar_production
+
+        sample = battery.update(now=now)
+        monitor_data.instant_battery_soc = sample.soc_percent
+        monitor_data.instant_battery_power = sample.instant_power
+
+        monitoring.push(monitor_data)
+    except Exception as e:
+        logging.exception(e)
+
+
+def update_sm():
+    now = datetime.now()
+    try:
+        monitor_data = MonitorData(now)
+        logging.debug("generate forced events")
+
+        # forced_period_window is 22pm to 6am
+        # now - 6hours ensure that edf.is_red_tomorrow target the expected day
+        grid_now = now - timedelta(hours=6)
+        if is_forced_period_window(now, settings) and (
+            grid.is_red_tomorrow(grid_now) or is_cloudy_tomorrow(now, weather, settings)
+        ):
+            sm.event_start_forced()
+            ntf.on_start_forced(grid_now)
+
+        else:
+            sm.event_stop_forced()
+
+        # set min_soc according to grid and weather
+        if is_low_hour_period_window(now) and (grid.is_red_tomorrow(grid_now)):
+            min_soc = 90 if is_cloudy_tomorrow(now, weather, settings) else 60
+        else:
+            min_soc = 5 if grid.is_red_today(now) else 20
+        battery.ensure_min_soc(min_soc)
+
+        logging.debug("generate sunny events")
+        if not grid.is_red_today(now) and is_sunny_period_window(now, settings):
+            sm.event_start_sunny()
+            ntf.on_start_sunny(now)
+        else:
+            sm.event_stop_sunny()
+            solar_heater_powered_on_duration = (
+                monitoring.get_solar_heater_powered_on_duration()
+            )
+            ntf.on_stop_sunny(now, solar_heater_powered_on_duration)
+
+        logging.debug("generate import event")
+
+        imported = merge_consumptions(now, power, battery)
+
+        if is_too_much_import(now, imported, settings):
+            logging.debug("too_much_import events")
+            sm.event_too_much_import()
+
+        solar_prod = extract_solar_prod(now, power)
+        if is_no_importing(now, imported, settings) and is_enough_sun(
+            now, solar_prod, settings
+        ):
+            logging.debug("no_importing events and enough sun")
+            sm.event_no_importing()
+
+        home_loads_consumption = home_consumptions(now, battery=battery, power=power)
+        if not_enought_consumption_when_switch_on(
+            now, home_loads_consumption, switch.history(), settings
+        ):
+            sm.event_not_enought_consumption_when_switch_on()
+
+        if sm.current_state == sm.full:
+            ntf.on_full_water_heater(now)
+
+        switch.set(now, sm.expected_switch_state)
+
+        monitor_data.switch_state = sm.expected_switch_state
+        monitor_data.soft_solar_router_state = sm.current_state.name
+
+        monitoring.push(monitor_data)
     except Exception as e:
         logging.exception(e)
 
 
 def init():
-    global settings, sm, sm_poller, power_poller, weather, power, switch, monitoring, grid, ntf, battery
+    global settings, sm, weather, power, switch, monitoring, grid, ntf, battery
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     dry_run = parser.parse_args().dry_run
@@ -144,8 +223,6 @@ def init():
     now = datetime.now()
     sm = SolarRouterStateMachine()
     sm.add_observer(LogObserver())
-    sm_poller = Poller(now, time(minute=1))
-    power_poller = Poller(now, time(second=2))
     weather = OpenMeteo()
     power = Envoy(
         host="envoy",
@@ -201,104 +278,12 @@ def init():
         grid = Edf()
 
 
-def periodic_task(
-    settings: Settings,
-    now: datetime,
-    sm: SolarRouterStateMachine,
-    sm_poller: Poller,
-    power_poller: Poller,
-    weather: Weather,
-    power: Power,
-    switch: Switch,
-    monitoring: Monitoring,
-    grid: Grid,
-    ntf: Notifications,
-    battery: Battery,
-):
-    monitor_data = MonitorData(now)
-
-    if power_poller.poll(now):
-        logging.debug("update power")
-        sample = power.update(now)
-        monitor_data.power_import = sample.imported_from_grid
-        monitor_data.instant_solar_production = sample.instant_solar_production
-        monitor_data.total_solar_production = sample.total_solar_production
-
-        sample = battery.update(now=now)
-        monitor_data.instant_battery_soc = sample.soc_percent
-        monitor_data.instant_battery_power = sample.instant_power
-
-    if sm_poller.poll(now):
-        logging.debug("generate forced events")
-
-        # forced_period_window is 22pm to 6am
-        # now - 6hours ensure that edf.is_red_tomorrow target the expected day
-        grid_now = now - timedelta(hours=6)
-        if is_forced_period_window(now, settings) and (
-            grid.is_red_tomorrow(grid_now) or is_cloudy_tomorrow(now, weather, settings)
-        ):
-            sm.event_start_forced()
-            ntf.on_start_forced(grid_now)
-
-        else:
-            sm.event_stop_forced()
-
-        # set min_soc according to grid and weather
-        if is_low_hour_period_window(now) and (
-            grid.is_red_tomorrow(grid_now) 
-        ):
-            min_soc =  90 if is_cloudy_tomorrow(now, weather, settings) else 60
-        else:
-            min_soc = 5 if  grid.is_red_today(now) else 20
-        battery.ensure_min_soc(min_soc)
-
-
-
-        logging.debug("generate sunny events")
-        if not grid.is_red_today(now) and is_sunny_period_window(now, settings):
-            sm.event_start_sunny()
-            ntf.on_start_sunny(now)
-        else:
-            sm.event_stop_sunny()
-            solar_heater_powered_on_duration = monitoring.get_solar_heater_powered_on_duration()
-            ntf.on_stop_sunny(now,solar_heater_powered_on_duration)
-
-        logging.debug("generate import event")
-
-        imported = merge_consumptions(now, power, battery)
-
-        if is_too_much_import(now, imported, settings):
-            logging.debug("too_much_import events")
-            sm.event_too_much_import()
-
-        solar_prod = extract_solar_prod(now, power)
-        if is_no_importing(now, imported, settings) and is_enough_sun(
-            now, solar_prod, settings
-        ):
-            logging.debug("no_importing events and enough sun")
-            sm.event_no_importing()
-
-        home_loads_consumption = home_consumptions(now, battery=battery, power=power)
-        if not_enought_consumption_when_switch_on(
-            now, home_loads_consumption, switch.history(), settings
-        ):
-            sm.event_not_enought_consumption_when_switch_on()
-
-        if sm.current_state == sm.full:
-            ntf.on_full_water_heater(now)
-
-        switch.set(now, sm.expected_switch_state)
-
-        monitor_data.switch_state = sm.expected_switch_state
-        monitor_data.soft_solar_router_state = sm.current_state.name
-    monitoring.push(monitor_data)
-
-
 try:
     init()
      # run event loop
     scheduler = BackgroundScheduler()
-    scheduler.add_job(tick, "interval", seconds=2)
+    scheduler.add_job(update_power, "interval", seconds=2)
+    scheduler.add_job(update_sm, "interval", minutes=1)
     scheduler.start()
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
