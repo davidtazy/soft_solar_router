@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon chauffe eau</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        h1 {
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .warning {
+            background-color: #ffdddd;
+            border-left: 6px solid #f44336;
+            margin-bottom: 15px;
+            padding: 10px;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            border-left: 6px solid #4caf50;
+            margin-bottom: 15px;
+            padding: 10px;
+        }
+
+        .metric {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        /* Toggle Switch */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #eef2f5;
+            border-radius: 8px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #2196F3;
+        }
+
+        input:focus+.slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked+.slider:before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+
+        .disabled {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Mon chauffe eau</h1>
+
+        {% if is_cloudy_tomorrow %}
+        <div class="warning">
+            <p>🌧️ <strong>Attention :</strong> Demain il fait pas beau, le chauffe eau sera demarré ce soir.</p>
+        </div>
+        {% else %}
+        <div class="success">
+            <p>☀️ Temps ensoleillé demain</p>
+        </div>
+        {% endif %}
+
+        <div class="metric">
+            <p>Durée d'allumage depuis 24h : <strong>{{ solar_heater_duration }}</strong></p>
+        </div>
+
+        <div class="switch-container">
+            <label for="forceSwitch">Forcer l'allumage du chauffe eau ce soir</label>
+            <form action="/force" method="post" style="display:inline;">
+                <label class="switch">
+                    <input type="checkbox" name="force_state" value="true" id="forceSwitch"
+                        onchange="this.form.submit()" {% if is_manual_requested %}checked{% endif %}>
+                    <span class="slider round"></span>
+                </label>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

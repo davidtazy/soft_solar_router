@@ -5,7 +5,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from soft_solar_router.monitoring.influx import Influx
-from soft_solar_router.application.interfaces.monitoring import MonitorData, PowerUnit
+from soft_solar_router.application.interfaces.monitoring import  PowerUnit
 
 load_dotenv()
 
@@ -31,8 +31,7 @@ if not org:
 
 influx = Influx(url, org, token)
 now = datetime.now()
-m = MonitorData(now)
-m.power_import = PowerUnit.FromWatts(123)
-m.switch_state = True
 
-assert influx.push(m) == 2
+print(f"swhitch on time {influx.get_solar_heater_powered_on_duration()} ")
+
+#assert influx.push(m) == 2

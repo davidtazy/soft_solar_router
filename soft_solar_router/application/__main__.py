@@ -60,6 +60,7 @@ from soft_solar_router.persistence.file import FilePersistence
 from fastapi import FastAPI
 import uvicorn
 from apscheduler.schedulers.background import BackgroundScheduler
+from soft_solar_router.webview.router import create_router
 
 load_dotenv()
 
@@ -106,6 +107,7 @@ grid = None
 ntf = None
 battery = None
 persistence = None
+webview_router = None
 
 
 def update_power():
@@ -201,7 +203,7 @@ def update_sm():
 
 
 def init():
-    global settings, sm, weather, power, switch, monitoring, grid, ntf, battery
+    global settings, sm, weather, power, switch, monitoring, grid, ntf, battery,webview_router
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     dry_run = parser.parse_args().dry_run
@@ -249,7 +251,7 @@ def init():
         max_duration=time(minute=15),
     )
 
-    persistence = FilePersistence(path="soft_solar_router_db.json")
+    persistence = FilePersistence(file_path="soft_solar_router_db.json")
 
     if dry_run:
         switch = FakeSwitch(history_duration=switch_history_duration)
@@ -284,18 +286,22 @@ def init():
             raise ValueError("env values influx_org not set")
         monitoring = influx.Influx(influx_url, influx_org, influx_token)
         grid = Edf()
+    
+    webview_router = create_router(weather, settings, monitoring, persistence)
+    app.include_router(webview_router)
 
 
-try:
-    init()
-     # run event loop
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(update_power, "interval", seconds=2)
-    scheduler.add_job(update_sm, "interval", minutes=1)
-    scheduler.start()
+if __name__ == "__main__":
+    try:
+        init()
+         # run event loop
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(update_power, "interval", seconds=2)
+        scheduler.add_job(update_sm, "interval", minutes=1)
+        scheduler.start()
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-except Exception as e:
-    logging.exception(e)
-    Ntfy().on_fatal_error(datetime.now(),str(e))
-    sys.exit(1)
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    except Exception as e:
+        logging.exception(e)
+        Ntfy().on_fatal_error(datetime.now(),str(e))
+        sys.exit(1)

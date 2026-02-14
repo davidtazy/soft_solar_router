@@ -7,5 +7,5 @@ class Persistence(ABC):
         pass
 
     @abstractmethod
-    def request_manual_waterheater_on_today(self, now: datetime):
+    def set_manual_request(self, now: datetime, enabled: bool):
         pass

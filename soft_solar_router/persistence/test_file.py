@@ -16,13 +16,21 @@ def test_initial_state(persistence_file):
 def test_request_manual_on(persistence_file):
     p = FilePersistence(persistence_file)
     now = datetime.now()
-    p.request_manual_waterheater_on_today(now)
+    p.set_manual_request(now, True)
     assert p.is_waterheater_on_manually_requested_today(now)
+
+def test_request_manual_off(persistence_file):
+    p = FilePersistence(persistence_file)
+    now = datetime.now()
+    p.set_manual_request(now, True)
+    assert p.is_waterheater_on_manually_requested_today(now)
+    p.set_manual_request(now, False)
+    assert not p.is_waterheater_on_manually_requested_today(now)
 
 def test_persistence_across_instances(persistence_file):
     p1 = FilePersistence(persistence_file)
     now = datetime.now()
-    p1.request_manual_waterheater_on_today(now)
+    p1.set_manual_request(now, True)
     
     p2 = FilePersistence(persistence_file)
     assert p2.is_waterheater_on_manually_requested_today(now)
@@ -33,7 +41,7 @@ def test_day_change_logic(persistence_file):
     now = datetime.now()
     
     # Request on "today" (Oct 27)
-    p.request_manual_waterheater_on_today(now)
+    p.set_manual_request(now, True)
     assert p.is_waterheater_on_manually_requested_today(now)
     
     # Move to tomorrow 5am (still considered "today" by logic)

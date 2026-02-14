@@ -36,7 +36,7 @@ class Influx(Monitoring):
             for table in result:
                 for record in table.records:
                     if record:
-                        return datetime.timedelta(seconds=int(record.get_value()))*60
+                        return datetime.timedelta(hours=record.get_value())
                     
 
         logger.error(" get_solar_heater_powered_on_duration - No data found.")
@@ -45,12 +45,20 @@ class Influx(Monitoring):
     @staticmethod
     def _solar_heater_powered_on_duration():
         return f"""
-        from(bucket: "teleinfo")
-            |> range(start: -12h)
+        import "date"
+        import "timezone"
+        option location = timezone.location(name: "Europe/Paris")
+        startTime = date.add(d: -2h, to: date.truncate(t: now(), unit: 1d))
+
+       from(bucket: "teleinfo")
+            |> range(start: startTime)
             |> filter(fn: (r) => r._measurement == "switch_state")
-            |> toInt()
-            |> stateDuration(column: "_value", fn: (r)=> r._value == 1)
-            |> aggregateWindow(every:1d,       fn: sum)
+            |> toInt() // Assure que la valeur est 0 ou 1
+            |> aggregateWindow(
+                every: 24h,
+                fn: (column, tables=<-) => tables |> integral(unit: 1h, column: column),
+                offset: -12h
+            )
             |> yield(name: "count")
         """
 

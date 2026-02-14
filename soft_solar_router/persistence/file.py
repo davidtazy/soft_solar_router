@@ -25,6 +25,9 @@ class FilePersistence(Persistence):
     def is_waterheater_on_manually_requested_today(self, now: datetime) -> bool:
         return self._cached_date == self._get_adjusted_today(now)
 
-    def request_manual_waterheater_on_today(self, now: datetime):
-        self._cached_date = self._get_adjusted_today(now)
+    def set_manual_request(self, now: datetime, enabled: bool):
+        if enabled:
+            self._cached_date = self._get_adjusted_today(now)
+        else:
+            self._cached_date = ""
         self._save()
