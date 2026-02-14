@@ -203,7 +203,7 @@ def update_sm():
 
 
 def init():
-    global settings, sm, weather, power, switch, monitoring, grid, ntf, battery,webview_router
+    global settings, sm, weather, power, switch, monitoring, grid, ntf, battery,webview_router,persistence
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     dry_run = parser.parse_args().dry_run
@@ -296,7 +296,7 @@ if __name__ == "__main__":
         init()
          # run event loop
         scheduler = BackgroundScheduler()
-        scheduler.add_job(update_power, "interval", seconds=2)
+        scheduler.add_job(update_power, "interval", seconds=5)
         scheduler.add_job(update_sm, "interval", minutes=1)
         scheduler.start()
 
