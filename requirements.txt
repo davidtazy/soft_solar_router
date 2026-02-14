@@ -21,3 +21,4 @@ humanize
 fastapi
 uvicorn[standard]
 apscheduler
+freezegun==1.5.5

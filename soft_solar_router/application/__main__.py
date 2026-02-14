@@ -54,6 +54,8 @@ from soft_solar_router.notifications.ntfy import Ntfy
 
 from soft_solar_router.battery.victron_modbus_tcp import VictronModbusTcp
 
+from soft_solar_router.persistence.file import FilePersistence
+
 
 from fastapi import FastAPI
 import uvicorn
@@ -103,6 +105,7 @@ monitoring = None
 grid = None
 ntf = None
 battery = None
+persistence = None
 
 
 def update_power():
@@ -136,7 +139,8 @@ def update_sm():
         # now - 6hours ensure that edf.is_red_tomorrow target the expected day
         grid_now = now - timedelta(hours=6)
         if is_forced_period_window(now, settings) and (
-            grid.is_red_tomorrow(grid_now) or is_cloudy_tomorrow(now, weather, settings)
+            grid.is_red_tomorrow(grid_now) or is_cloudy_tomorrow(now, weather, settings) 
+            or persistence.is_waterheater_on_manually_requested_today(now)
         ):
             sm.event_start_forced()
             ntf.on_start_forced(grid_now)
@@ -245,6 +249,8 @@ def init():
         max_duration=time(minute=15),
     )
 
+    persistence = FilePersistence(path="soft_solar_router_db.json")
+
     if dry_run:
         switch = FakeSwitch(history_duration=switch_history_duration)
         monitoring = FakeMonitoring()
@@ -264,6 +270,8 @@ def init():
             ip_address="192.168.1.37",
             device_id="0",
         )
+
+    
 
         # disable switch command
         # switch = FakeSwitch(history_duration=switch_history_duration)
