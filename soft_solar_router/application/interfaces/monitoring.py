@@ -56,3 +56,11 @@ class Monitoring(ABC):
     @abstractmethod
     def get_solar_heater_powered_on_duration(self)-> timedelta:
         pass
+
+    @abstractmethod
+    def get_solar_heater_powered_on_duration_last_night(self)-> timedelta:
+        pass
+
+    @abstractmethod
+    def get_solar_heater_powered_on_duration_today(self)-> timedelta:
+        pass

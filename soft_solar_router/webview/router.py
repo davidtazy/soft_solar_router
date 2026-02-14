@@ -1,10 +1,16 @@
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+
+def humanize_duration(duration: timedelta) -> str:
+    total_seconds = int(duration.total_seconds())
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    return f"{hours}h {minutes}m"
 
 def create_router(weather, settings, monitoring, persistence):
     router = APIRouter()
@@ -20,20 +26,16 @@ def create_router(weather, settings, monitoring, persistence):
         from soft_solar_router.application.events import is_cloudy_tomorrow
         is_cloudy = is_cloudy_tomorrow(now, weather, settings)
 
-        raw_duration = monitoring.get_solar_heater_powered_on_duration()
-        
-        # Format duration to "Xh Ym"
-        total_seconds = int(raw_duration.total_seconds())
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        duration_str = f"{hours}h {minutes}m"
+        last_night_duration = monitoring.get_solar_heater_powered_on_duration_last_night()
+        today_duration = monitoring.get_solar_heater_powered_on_duration_today()
 
         is_manual = persistence.is_waterheater_on_manually_requested_today(now)
 
         return templates.TemplateResponse("index.html", {
             "request": request,
             "is_cloudy_tomorrow": is_cloudy,
-            "solar_heater_duration": duration_str,
+            "last_night_duration": humanize_duration(last_night_duration),
+            "today_duration": humanize_duration(today_duration),
             "is_manual_requested": is_manual
         })
 

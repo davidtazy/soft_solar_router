@@ -28,8 +28,17 @@ class Influx(Monitoring):
         return len(points)
     
     def get_solar_heater_powered_on_duration(self) -> datetime.timedelta:
+        return self._get_duration(self._solar_heater_powered_on_duration())
+
+    def get_solar_heater_powered_on_duration_last_night(self) -> datetime.timedelta:
+        return self._get_duration(self._solar_heater_powered_on_duration_night())
+
+    def get_solar_heater_powered_on_duration_today(self) -> datetime.timedelta:
+        return self._get_duration(self._solar_heater_powered_on_duration_day())
+
+    def _get_duration(self, query: str) -> datetime.timedelta:
         # Execute the query
-        result = self.query_api.query(self._solar_heater_powered_on_duration())
+        result = self.query_api.query(query)
 
         # Extract the result
         if result:
@@ -37,9 +46,8 @@ class Influx(Monitoring):
                 for record in table.records:
                     if record:
                         return datetime.timedelta(hours=record.get_value())
-                    
 
-        logger.error(" get_solar_heater_powered_on_duration - No data found.")
+        logger.error(" _get_duration - No data found.")
         return datetime.timedelta()
 
     @staticmethod
@@ -52,6 +60,52 @@ class Influx(Monitoring):
 
        from(bucket: "teleinfo")
             |> range(start: startTime)
+            |> filter(fn: (r) => r._measurement == "switch_state")
+            |> toInt() // Assure que la valeur est 0 ou 1
+            |> aggregateWindow(
+                every: 24h,
+                fn: (column, tables=<-) => tables |> integral(unit: 1h, column: column),
+                offset: -12h
+            )
+            |> yield(name: "count")
+        """
+
+    @staticmethod
+    def _solar_heater_powered_on_duration_night():
+        return f"""
+        import "date"
+        import "timezone"
+        option location = timezone.location(name: "Europe/Paris")
+        startTime = date.add(d: -2h, to: date.truncate(t: now(), unit: 1d))
+        endTime = date.add(d: 8h, to: startTime)
+       from(bucket: "teleinfo")
+            |> range(start: startTime, stop: endTime)
+            |> filter(fn: (r) => r._measurement == "switch_state")
+            |> toInt() // Assure que la valeur est 0 ou 1
+            |> aggregateWindow(
+                every: 24h,
+                fn: (column, tables=<-) => tables |> integral(unit: 1h, column: column),
+                offset: -12h
+            )
+            |> yield(name: "count")
+        """
+
+    @staticmethod
+    def _solar_heater_powered_on_duration_day():
+        return f"""
+        import "date"
+        import "timezone"
+        option location = timezone.location(name: "Europe/Paris")
+        // Point de référence : Aujourd'hui à 00:00
+        today = date.truncate(t: now(), unit: 1d)
+
+        // Start : Aujourd'hui à 6h00
+        startTime = date.add(d: 6h, to: today)
+
+        // End : Aujourd'hui à 20h00
+        endTime = date.add(d: 20h, to: today)
+       from(bucket: "teleinfo")
+            |> range(start: startTime, stop: endTime)
             |> filter(fn: (r) => r._measurement == "switch_state")
             |> toInt() // Assure que la valeur est 0 ou 1
             |> aggregateWindow(
