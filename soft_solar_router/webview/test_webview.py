@@ -10,8 +10,11 @@ mock_monitoring = MagicMock()
 mock_persistence = MagicMock()
 
 # Setup mocks
-from datetime import timedelta
+from datetime import timedelta, datetime
 mock_monitoring.get_solar_heater_powered_on_duration.return_value = timedelta(hours=2, minutes=30)
+mock_monitoring.get_solar_heater_powered_on_duration_last_night.return_value = timedelta(hours=5)
+mock_monitoring.get_solar_heater_powered_on_duration_today.return_value = timedelta(hours=1, minutes=30)
+mock_monitoring.get_last_time_status_full.return_value = datetime.now() - timedelta(days=2)
 mock_persistence.is_waterheater_on_manually_requested_today.return_value = False
 
 # Setup Settings mock values used in events.py

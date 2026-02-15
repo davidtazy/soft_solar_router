@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
@@ -11,6 +11,21 @@ def humanize_duration(duration: timedelta) -> str:
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60
     return f"{hours}h {minutes}m"
+
+def timeago(date: datetime) -> str:
+    now = datetime.now(timezone.utc)
+    diff = now - date
+    if diff < timedelta(minutes=1):
+        return "à l'instant"
+    elif diff < timedelta(hours=1):
+        return f"il y a {diff.seconds // 60} minutes"
+    elif diff < timedelta(days=1):
+        return f"il y a {diff.seconds // 3600} heures"
+    elif diff < timedelta(days=7):
+        return f"il y a {diff.days} jours"
+    else:
+        return f"il y a {diff.days // 7} semaines"
+    
 
 def create_router(weather, settings, monitoring, persistence):
     router = APIRouter()
@@ -36,7 +51,8 @@ def create_router(weather, settings, monitoring, persistence):
             "is_cloudy_tomorrow": is_cloudy,
             "last_night_duration": humanize_duration(last_night_duration),
             "today_duration": humanize_duration(today_duration),
-            "is_manual_requested": is_manual
+            "is_manual_requested": is_manual,
+            "last_time_status_full": timeago(monitoring.get_last_time_status_full())
         })
 
     @router.post("/force")

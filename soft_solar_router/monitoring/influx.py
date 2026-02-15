@@ -36,6 +36,9 @@ class Influx(Monitoring):
     def get_solar_heater_powered_on_duration_today(self) -> datetime.timedelta:
         return self._get_duration(self._solar_heater_powered_on_duration_day())
 
+    def get_last_time_status_full(self) -> datetime.datetime:
+        return self._get_datetime(self._last_time_status_full())
+
     def _get_duration(self, query: str) -> datetime.timedelta:
         # Execute the query
         result = self.query_api.query(query)
@@ -49,6 +52,20 @@ class Influx(Monitoring):
 
         logger.error(" _get_duration - No data found.")
         return datetime.timedelta()
+
+    def _get_datetime(self, query: str) -> datetime.datetime:
+        # Execute the query
+        result = self.query_api.query(query)
+
+        # Extract the result
+        if result:
+            for table in result:
+                for record in table.records:
+                    if record:
+                        return record.get_time()
+
+        logger.error(" _get_datetime - No data found.")
+        return datetime.datetime(1970, 1, 1)
 
     @staticmethod
     def _solar_heater_powered_on_duration():
@@ -114,6 +131,18 @@ class Influx(Monitoring):
                 offset: -12h
             )
             |> yield(name: "count")
+        """
+
+    @staticmethod
+    def _last_time_status_full():
+        return """
+        import "date"
+        
+        from(bucket: "teleinfo")
+            |> range(start: -5d) 
+            |> filter(fn: (r) => r._measurement == "soft_solar_router_state" and r._field == "value" and r._value == "Full")
+            |> last()   
+            |> keep(columns: ["_time"]) 
         """
 
 

@@ -33,5 +33,6 @@ influx = Influx(url, org, token)
 now = datetime.now()
 
 print(f"swhitch on time {influx.get_solar_heater_powered_on_duration()} ")
+print(f"last time status full {influx.get_last_time_status_full()}  ")
 
 #assert influx.push(m) == 2

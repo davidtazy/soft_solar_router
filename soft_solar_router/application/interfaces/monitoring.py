@@ -64,3 +64,7 @@ class Monitoring(ABC):
     @abstractmethod
     def get_solar_heater_powered_on_duration_today(self)-> timedelta:
         pass
+
+    @abstractmethod
+    def get_last_time_status_full(self)-> datetime:
+        pass
